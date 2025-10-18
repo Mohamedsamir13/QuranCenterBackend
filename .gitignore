@@ -1,0 +1,13 @@
+# 🔒 Secrets and environment files
+.env
+src/config/firebaseConfig.json
+
+# 🧠 Node dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# 🧹 Build and logs
+dist/
+build/
+.DS_Store
