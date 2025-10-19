@@ -12,10 +12,9 @@ app.use(cors());
 
 // Routes
 app.use('/api/students', studentRoutes);
-// app.use('/api/teachers', teacherRoutes);
+app.use('/api/teachers', teacherRoutes);
 
-// ✅ مهم جدًا: لا تكتب app.listen()
-// لأن Vercel بيعمل listen بنفسه
-console.log('✅ Serverless app initialized successfully');
+
+// console.log('✅ Serverless app initialized successfully');
 
 module.exports = app;
