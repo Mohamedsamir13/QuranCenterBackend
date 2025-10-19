@@ -16,4 +16,6 @@ app.use('/api/students', studentRoutes);
 
 // ✅ مهم جدًا: لا تكتب app.listen()
 // لأن Vercel بيعمل listen بنفسه
+console.log('✅ Serverless app initialized successfully');
+
 module.exports = app;
