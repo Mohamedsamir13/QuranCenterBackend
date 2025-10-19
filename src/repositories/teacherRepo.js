@@ -1,5 +1,5 @@
 const { db } = require('../config/firebase');
-const TeacherModel = require('../models/teacherModel');
+const TeacherModel = require('../models/teachersModel');
 
 const teachersCollection = db.collection('teachers');
 

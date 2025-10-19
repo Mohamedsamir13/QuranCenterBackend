@@ -4,6 +4,8 @@ const cors = require('cors');
 
 // Import routes
 const studentRoutes = require('../src/routes/studentRoutes');
+const teacherRoutes = require('../src/routes/teatcherRoutes'); 
+
 // const teacherRoutes = require('../src/routes/teacherRoutes');
 
 const app = express();
