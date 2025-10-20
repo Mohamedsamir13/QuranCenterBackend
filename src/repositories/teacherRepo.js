@@ -22,9 +22,18 @@ exports.addTeacher = async (teacherData) => {
 };
 
 exports.addStudentToTeacher = async (teacherId, studentId) => {
-  const teacherRef = teachersCollection.doc(teacherId);
-  await teacherRef.update({
-    students: admin.firestore.FieldValue.arrayUnion(studentId),
-  });
-  return true;
+  console.log('🟦 Repo: Adding student', studentId, 'to teacher', teacherId);
+
+  try {
+    const teacherRef = teachersCollection.doc(teacherId);
+    await teacherRef.update({
+      students: admin.firestore.FieldValue.arrayUnion(studentId),
+    });
+    console.log('✅ Repo: Student added successfully');
+    return true;
+  } catch (error) {
+    console.error('🔥 Repo ERROR:', error);
+    throw error;
+  }
 };
+
