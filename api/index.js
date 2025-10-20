@@ -15,6 +15,9 @@ app.use(cors());
 // Routes
 app.use('/api/students', studentRoutes);
 app.use('/api/teachers', teacherRoutes);
+app.get('/', (req, res) => {
+  res.send('🚀 QuranCenter API is live and healthy!');
+});
 
 
 // console.log('✅ Serverless app initialized successfully');
