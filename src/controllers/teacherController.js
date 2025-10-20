@@ -46,16 +46,21 @@ exports.create = async (req, res) => {
 
 // ✅ Add student to teacher
 exports.addStudent = async (req, res) => {
-  try {
-    const { studentId } = req.body;
-    const teacherId = req.params.id;
-    if (!studentId)
-      return res.status(400).json({ success: false, message: 'studentId required' });
+  const { id } = req.params;
+  const { studentId } = req.body;
 
-    await teacherService.addStudent(teacherId, studentId);
-    res.status(200).json({ success: true, message: 'Student added successfully' });
-  } catch (err) {
-    console.error('❌ Error adding student:', err);
-    res.status(500).json({ success: false, message: 'Failed to add student' });
+  console.log('📩 Received request to add student:', studentId, 'to teacher:', id);
+
+  if (!studentId) {
+    return res.status(400).json({ success: false, message: "studentId required" });
+  }
+
+  try {
+    await teacherService.addStudent(id, studentId);
+    console.log('✅ Successfully added student', studentId, 'to teacher', id);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('🔥 ERROR in addStudent:', error);
+    res.status(500).json({ success: false, message: "Failed to add student" });
   }
 };

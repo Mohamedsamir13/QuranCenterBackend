@@ -1,10 +1,22 @@
-// src/models/studentModel.js
+class Goal {
+  constructor({ targetType, targetValue, achievedValue = 0, startDate, endDate }) {
+    this.targetType = targetType; // "pages", "surahs", or "juz"
+    this.targetValue = targetValue;
+    this.achievedValue = achievedValue;
+    this.startDate = startDate;
+    this.endDate = endDate;
+  }
+}
+
 class StudentModel {
-  constructor({ id, name, group, reports = [] }) {
+  constructor({ id, name, age, group, teacherId, riwaya, goal = null }) {
     this.id = id;
     this.name = name;
+    this.age = age;
     this.group = group;
-    this.reports = reports;
+    this.teacherId = teacherId;
+    this.riwaya = riwaya; // 🎯 New attribute
+    this.goal = goal ? new Goal(goal) : null;
   }
 
   static fromFirestore(doc) {
@@ -12,16 +24,22 @@ class StudentModel {
     return new StudentModel({
       id: doc.id,
       name: data.name,
+      age: data.age,
       group: data.group,
-      reports: data.reports || [],
+      teacherId: data.teacherId,
+      riwaya: data.riwaya || '', // ✅ added here
+      goal: data.goal || null,
     });
   }
 
   toFirestore() {
     return {
       name: this.name,
+      age: this.age,
       group: this.group,
-      reports: this.reports,
+      teacherId: this.teacherId,
+      riwaya: this.riwaya, // ✅ added here
+      goal: this.goal,
     };
   }
 }
