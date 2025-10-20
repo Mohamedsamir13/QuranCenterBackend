@@ -6,11 +6,10 @@ const studentController = require('../controllers/studentController');
 
 // routes
 router.get('/', studentController.getAll);
-router.post('/', studentController.create);
+router.post('/create-student', studentController.create);
 router.get('/:id', studentController.getById);
 
 // add report: POST /api/students/:id/reports
 router.post('/:id/reports', studentController.addReport);
 
 module.exports = router;
-// ...existing code...
