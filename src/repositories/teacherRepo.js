@@ -1,4 +1,4 @@
-const { db } = require('../config/firebase');
+const { db, admin } = require('../config/firebase'); // ✅ استورد admin
 const TeacherModel = require('../models/teachersModel');
 
 const teachersCollection = db.collection('teachers');
