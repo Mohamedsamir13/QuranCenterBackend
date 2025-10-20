@@ -1,4 +1,4 @@
-const studentRepo = require('../repositories/studentRepository');
+const studentRepo = require('../repositories/studentRepositories.js');
 
 exports.getStudents = async () => await studentRepo.getAllStudents();
 exports.getStudent = async (id) => await studentRepo.getStudentById(id);
