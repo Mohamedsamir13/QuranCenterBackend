@@ -1,8 +1,15 @@
 const teacherRepo = require('../repositories/teacherRepo');
 
+
 exports.getAll = async () => {
-  return await teacherRepo.getAllTeachers();
+  try {
+    return await teacherRepo.getAllTeachers();
+  } catch (err) {
+    console.error('⚠️ Error inside teacherService.getAll:', err.message);
+    throw new Error(`[ServiceError] ${err.message || err}`);
+  }
 };
+
 
 exports.getById = async (id) => {
   return await teacherRepo.getTeacherById(id);

@@ -1,37 +1,46 @@
-const { db, admin } = require('../config/firebase');
+const firebase = require('../config/firebase');
+const admin = firebase.admin;
+const db = firebase.db;
 const TeacherModel = require('../models/teachersModel');
-
 const teachersCollection = db.collection('teachers');
 
-exports.addStudentToTeacher = async (teacherId, studentId) => {
-  console.log('🟦 Repo: Adding student', studentId, 'to teacher', teacherId);
-
+exports.getAllTeachers = async () => {
+  console.log('📡 [Repo] getAllTeachers() called');
   try {
-    // 🔍 Step 1: تأكد أن teacherId مش فاضي
-    if (!teacherId || !studentId) {
-      console.error('⚠️ Missing IDs:', { teacherId, studentId });
-      throw new Error('teacherId and studentId are required');
-    }
+    console.log('📁 Using collection:', teachersCollection.id);
+    const snapshot = await teachersCollection.get();
+    console.log('📄 Snapshot size:', snapshot.size);
 
-    // 🔍 Step 2: تحقق أن المدرس موجود
-    const teacherDoc = await teachersCollection.doc(teacherId).get();
-    if (!teacherDoc.exists) {
-      console.error('❌ No teacher found with ID:', teacherId);
-      throw new Error(`Teacher not found: ${teacherId}`);
-    }
-
-    console.log('📘 Current teacher data:', teacherDoc.data());
-
-    // 🔍 Step 3: أضف الطالب
-    await teachersCollection.doc(teacherId).update({
-      students: admin.firestore.FieldValue.arrayUnion(studentId),
+    // Debug each doc
+    snapshot.forEach(doc => {
+      console.log('👤 Teacher doc found:', doc.id, doc.data());
     });
 
-    console.log('✅ Repo: Student added successfully');
-    return true;
+    return snapshot.docs.map(TeacherModel.fromFirestore);
   } catch (error) {
-    console.error('🔥 FULL FIREBASE ERROR STACK 🔥');
-    console.error(error.stack || error);
+    console.error('🔥 Firestore error in getAllTeachers:', error.code, error.message, error.stack);
     throw error;
   }
+};
+
+
+exports.getTeacherById = async (id) => {
+  const doc = await teachersCollection.doc(id).get();
+  if (!doc.exists) return null;
+  return TeacherModel.fromFirestore(doc);
+};
+
+exports.addTeacher = async (teacherData) => {
+  const teacher = new TeacherModel(teacherData);
+  const docRef = await teachersCollection.add(teacher.toFirestore());
+  await docRef.update({ id: docRef.id });
+  return new TeacherModel({ ...teacherData, id: docRef.id });
+};
+
+exports.addStudentToTeacher = async (teacherId, studentId) => {
+  const teacherRef = teachersCollection.doc(teacherId);
+  await teacherRef.update({
+    students: admin.firestore.FieldValue.arrayUnion(studentId),
+  });
+  return true;
 };
