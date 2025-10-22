@@ -28,7 +28,7 @@ exports.create = async (req, res) => {
     const newStudent = await studentService.createStudent({
       name,
       group,
-        riwaya, // ✅ هنا بنمرر الرواية
+     riwaya, // ✅ هنا بنمرر الرواية
 
       reports: [],
     });
