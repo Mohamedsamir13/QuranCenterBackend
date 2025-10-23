@@ -19,17 +19,21 @@ exports.getAll = async (req, res) => {
 // ✅ Create new student
 exports.create = async (req, res) => {
   try {
-    const { name, group } = req.body;
+    console.log('📥 Incoming Student Payload:', req.body);
+    const { name, age, group, teacherId, riwaya, goal } = req.body;
 
     if (!name || !group) {
       return res.status(400).json({ success: false, message: 'name and group are required' });
     }
 
+    // ✅ call createStudent (NOT addStudent)
     const newStudent = await studentService.createStudent({
       name,
+      age,
       group,
-     riwaya, // ✅ هنا بنمرر الرواية
-
+      teacherId: teacherId || null,
+      riwaya: riwaya || '',
+      goal: goal || null,
       reports: [],
     });
 
@@ -40,9 +44,10 @@ exports.create = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error creating student:', error);
-    res.status(500).json({ success: false, message: 'Failed to create student' });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // ✅ Get student by ID
 exports.getById = async (req, res) => {

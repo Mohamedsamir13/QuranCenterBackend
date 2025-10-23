@@ -8,7 +8,7 @@ class ReportModel {
     remaining_pages,
     performance,
     notes,
-    teacherId,
+    teacherId = null, // ✅ Default to null if not provided
   }) {
     this.id = id;
     this.date = date;
@@ -18,7 +18,7 @@ class ReportModel {
     this.remaining_pages = remaining_pages;
     this.performance = performance;
     this.notes = notes;
-    this.teacherId = teacherId;
+    this.teacherId = teacherId ?? null; // ✅ Force null if undefined
   }
 
   static fromFirestore(doc) {
@@ -26,6 +26,7 @@ class ReportModel {
     return new ReportModel({
       id: doc.id,
       ...data,
+      teacherId: data.teacherId ?? null, // ✅ Ensure it's present even if missing
     });
   }
 
@@ -38,7 +39,7 @@ class ReportModel {
       remaining_pages: this.remaining_pages,
       performance: this.performance,
       notes: this.notes,
-      teacherId: this.teacherId,
+      ...(this.teacherId ? { teacherId: this.teacherId } : {}), // ✅ Only include if not null
     };
   }
 }
