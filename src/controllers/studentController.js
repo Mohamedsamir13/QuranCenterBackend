@@ -23,10 +23,12 @@ exports.create = async (req, res) => {
     const { name, age, group, teacherId, riwaya, goal } = req.body;
 
     if (!name || !group) {
-      return res.status(400).json({ success: false, message: 'name and group are required' });
+      return res.status(400).json({
+        success: false,
+        message: 'name and group are required',
+      });
     }
 
-    // ✅ call createStudent (NOT addStudent)
     const newStudent = await studentService.createStudent({
       name,
       age,
@@ -39,16 +41,17 @@ exports.create = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Student created successfully',
+      message: 'Student created successfully and assigned if teacherId provided',
       data: newStudent,
     });
   } catch (error) {
     console.error('❌ Error creating student:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create student',
+    });
   }
 };
-
-
 // ✅ Get student by ID
 exports.getById = async (req, res) => {
   try {
