@@ -10,6 +10,7 @@ try {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY
       ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
       : undefined;
+console.log("🧩 Private key sample:", privateKey.substring(0, 40));
 
     if (!privateKey) {
       console.error("❌ FIREBASE_PRIVATE_KEY is missing");
