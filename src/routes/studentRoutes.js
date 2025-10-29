@@ -1,15 +1,17 @@
-// ...existing code...
+// src/routes/studentRoutes.js
 const express = require('express');
 const router = express.Router();
 
 const studentController = require('../controllers/studentController');
+const { getAllLimiter } = require('../middleWares/rateLimiter');
+const { verifyToken } = require('../middleWares/authMiddleware');
 
-// routes
-router.get('/', studentController.getAll);
-router.post('/create-student', studentController.create);
-router.get('/:id', studentController.getById);
+// 🧱 حماية endpoint getAll
+router.get('/', verifyToken, getAllLimiter, studentController.getAll);
 
-// add report: POST /api/students/:id/reports
-router.post('/:id/reports', studentController.addReport);
+// باقي الـ routes
+router.post('/create-student', verifyToken, studentController.create);
+router.get('/:id', verifyToken, studentController.getById);
+router.post('/:id/reports', verifyToken, studentController.addReport);
 
 module.exports = router;
