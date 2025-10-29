@@ -7,6 +7,6 @@ const router = express.Router();
 router.post('/register', register);
 
 // 🧱 Verify Firebase ID token (from client)
-router.get('/profile', verifyToken);
+router.get('/profile');
 
 module.exports = router;

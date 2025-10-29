@@ -6,12 +6,11 @@ const studentController = require('../controllers/studentController');
 const { getAllLimiter } = require('../middleWares/rateLimiter');
 const { verifyToken } = require('../middleWares/authMiddleware');
 
-// 🧱 حماية endpoint getAll
 router.get('/', verifyToken, getAllLimiter, studentController.getAll);
 
 // باقي الـ routes
-router.post('/create-student', verifyToken, studentController.create);
-router.get('/:id', verifyToken, studentController.getById);
-router.post('/:id/reports', verifyToken, studentController.addReport);
+router.post('/create-student',  studentController.create);
+router.get('/:id',  studentController.getById);
+router.post('/:id/reports',  studentController.addReport);
 
 module.exports = router;

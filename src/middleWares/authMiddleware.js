@@ -1,7 +1,5 @@
-// src/middlewares/authMiddleware.js
-const jwt = require('jsonwebtoken');
-const userRepo = require('../repositories/userRepo');
-require('dotenv').config();
+// src/middleWares/authMiddleware.js
+const { admin, db } = require('../config/firebase');
 
 const verifyToken = async (req, res, next) => {
   try {
@@ -10,30 +8,22 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({ message: 'Unauthorized: Missing token' });
     }
 
-    const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      return res.status(403).json({ message: 'Invalid or expired token' });
+    const idToken = authHeader.split('Bearer ')[1].trim();
+
+    // ✅ Verify Firebase token using Admin SDK
+    const decoded = await admin.auth().verifyIdToken(idToken);
+
+    // ✅ Optionally, get user profile from Firestore
+    const userDoc = await db.collection('users').doc(decoded.uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ message: 'User profile not found' });
     }
 
-    // Optional: check user still exists in DB
-    const user = await userRepo.findByEmail(decoded.email);
-    if (!user) return res.status(401).json({ message: 'User no longer exists' });
-
-    // Optional: token revocation check (tokenVersion pattern)
-    // If you store tokenVersion in user doc, e.g. user.tokenVersion
-    // if (user.tokenVersion && decoded.tokenVersion !== user.tokenVersion) {
-    //   return res.status(401).json({ message: 'Token revoked' });
-    // }
-
-    // Attach user info to request for controllers
-    req.user = { id: decoded.id, email: decoded.email, type: decoded.type };
+    req.user = userDoc.data();
     next();
   } catch (err) {
-    console.error('authMiddleware error', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Token verification error:', err.message);
+    return res.status(401).json({ message: 'Invalid or expired Firebase token' });
   }
 };
 
