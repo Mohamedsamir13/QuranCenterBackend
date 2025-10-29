@@ -1,57 +1,53 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { admin } = require('../config/firebase');
-const userRepo = require('../repositories/userRepo');
-require('dotenv').config();
+const { admin, db } = require('../config/firebase');
+const User = require('../models/userModel');
 
-// 🔹 Register new user
+/**
+ * 🔹 Register user using Firebase Auth
+ */
 const register = async ({ name, email, password, type }) => {
-  const existing = await userRepo.findByEmail(email);
-  if (existing) throw new Error('User already exists');
+  // Validate type
+  if (!['Parent', 'Teacher', 'Manager', 'Student'].includes(type)) {
+    throw new Error('Invalid user type');
+  }
 
-  // Create Firebase user
+  // Create user in Firebase Authentication
   const userRecord = await admin.auth().createUser({
     email,
     password,
     displayName: name,
   });
 
-  // Save to Firestore
-  const newUser = await userRepo.createUser({
+  // Save user data in Firestore (extra info)
+  const userData = {
     id: userRecord.uid,
     name,
     email,
     type,
-  });
+    createdAt: new Date().toISOString(),
+  };
+  await db.collection('users').doc(userRecord.uid).set(userData);
 
-  return newUser;
+  return userData;
 };
 
-// 🔹 Login user
-const login = async ({ email, password }) => {
-  const user = await userRepo.findByEmail(email);
-  if (!user) throw new Error('User not found');
-
-  // (Optional: if storing hashed passwords in Firestore)
-  // const isMatch = await bcrypt.compare(password, user.password);
-  // if (!isMatch) throw new Error('Invalid credentials');
-
-  const token = jwt.sign(
-    { id: user.id, email: user.email, type: user.type },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  );
-
-  return { user, token };
-};
-
-// 🔹 Verify JWT token
-const verifyToken = (token) => {
+/**
+ * 🔹 Login user with Firebase Auth (on client, not here)
+ * 🔹 This backend verifies Firebase ID Token
+ */
+const verifyFirebaseToken = async (token) => {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
-  } catch {
-    throw new Error('Invalid token');
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    // Fetch extra profile data from Firestore
+    const userDoc = await db.collection('users').doc(decoded.uid).get();
+    if (!userDoc.exists) {
+      throw new Error('User profile not found in Firestore');
+    }
+
+    return { auth: decoded, profile: userDoc.data() };
+  } catch (error) {
+    throw new Error('Invalid or expired Firebase token');
   }
 };
 
-module.exports = { register, login, verifyToken };
+module.exports = { register, verifyFirebaseToken };
