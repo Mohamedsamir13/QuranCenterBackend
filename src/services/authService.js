@@ -1,8 +1,14 @@
-const { admin, db } = require('../config/firebase');
-const User = require('../models/userModel');
+const { db } = require('../config/firebase');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const userRepo = require('../repositories/userRepo');
+require('dotenv').config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 /**
- * 🔹 Register user using Firebase Auth
+ * 🔹 Register user with password hashing
  */
 const register = async ({ name, email, password, type }) => {
   // Validate type
@@ -10,44 +16,104 @@ const register = async ({ name, email, password, type }) => {
     throw new Error('Invalid user type');
   }
 
-  // Create user in Firebase Authentication
-  const userRecord = await admin.auth().createUser({
-    email,
-    password,
-    displayName: name,
-  });
+  // Check if user already exists
+  const existingUser = await userRepo.findByEmail(email);
+  if (existingUser) {
+    throw new Error('User with this email already exists');
+  }
 
-  // Save user data in Firestore (extra info)
+  // Hash password
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Generate a unique ID for the user
+  const userId = db.collection('users').doc().id;
+
+  // Save user data in Firestore
   const userData = {
-    id: userRecord.uid,
+    id: userId,
     name,
     email,
+    password: hashedPassword, // Store hashed password
     type,
     createdAt: new Date().toISOString(),
   };
-  await db.collection('users').doc(userRecord.uid).set(userData);
+  await db.collection('users').doc(userId).set(userData);
 
-  return userData;
+  // Remove password from response
+  const { password: _, ...userWithoutPassword } = userData;
+  return userWithoutPassword;
 };
 
 /**
- * 🔹 Login user with Firebase Auth (on client, not here)
- * 🔹 This backend verifies Firebase ID Token
+ * 🔹 Login user with email and password, returns JWT token
  */
-const verifyFirebaseToken = async (token) => {
-  try {
-    const decoded = await admin.auth().verifyIdToken(token);
+const login = async ({ email, password }) => {
+  // Find user by email
+  const user = await userRepo.findByEmail(email);
+  if (!user) {
+    throw new Error('Invalid email or password');
+  }
 
-    // Fetch extra profile data from Firestore
-    const userDoc = await db.collection('users').doc(decoded.uid).get();
+  // Get user data from Firestore to access password
+  const userDoc = await db.collection('users').doc(user.id).get();
+  const userData = userDoc.data();
+
+  if (!userData.password) {
+    throw new Error('User account not properly configured');
+  }
+
+  // Verify password
+  const isPasswordValid = await bcrypt.compare(password, userData.password);
+  if (!isPasswordValid) {
+    throw new Error('Invalid email or password');
+  }
+
+  // Generate JWT token
+  const token = jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      type: user.type,
+    },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+
+  // Remove password from user data
+  const { password: _, ...userWithoutPassword } = userData;
+
+  return {
+    token,
+    user: userWithoutPassword,
+  };
+};
+
+/**
+ * 🔹 Verify JWT token
+ */
+const verifyToken = async (token) => {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Fetch user data from Firestore
+    const userDoc = await db.collection('users').doc(decoded.id).get();
     if (!userDoc.exists) {
-      throw new Error('User profile not found in Firestore');
+      throw new Error('User not found');
     }
 
-    return { auth: decoded, profile: userDoc.data() };
+    const userData = userDoc.data();
+    const { password: _, ...userWithoutPassword } = userData;
+
+    return userWithoutPassword;
   } catch (error) {
-    throw new Error('Invalid or expired Firebase token');
+    if (error.name === 'JsonWebTokenError') {
+      throw new Error('Invalid token');
+    }
+    if (error.name === 'TokenExpiredError') {
+      throw new Error('Token expired');
+    }
+    throw new Error('Token verification failed');
   }
 };
 
-module.exports = { register, verifyFirebaseToken };
+module.exports = { register, login, verifyToken };

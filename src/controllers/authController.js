@@ -1,11 +1,17 @@
 const authService = require('../services/authService');
 
 /**
- * 🧱 Register Controller (uses Firebase Auth)
+ * 🧱 Register Controller
  */
 const register = async (req, res) => {
   try {
     const { name, email, password, type } = req.body;
+    
+    // Validate required fields
+    if (!name || !email || !password || !type) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
     const user = await authService.register({ name, email, password, type });
     res.status(201).json({ message: 'User registered successfully', user });
   } catch (error) {
@@ -15,26 +21,27 @@ const register = async (req, res) => {
 };
 
 /**
- * 🧱 Verify Token Controller
- * Client sends Firebase ID Token -> verify with Admin SDK
+ * 🧱 Login Controller
  */
-const verifyToken = async (req, res) => {
+const login = async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Missing Firebase token' });
+    const { email, password } = req.body;
+
+    // Validate required fields
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const idToken = authHeader.split('Bearer ')[1];
-    const userData = await authService.verifyFirebaseToken(idToken);
+    const result = await authService.login({ email, password });
     res.status(200).json({
-      message: 'Token verified successfully',
-      user: userData.profile,
+      message: 'Login successful',
+      token: result.token,
+      user: result.user,
     });
   } catch (error) {
-    console.error('Verify token error:', error.message);
+    console.error('Login error:', error.message);
     res.status(401).json({ message: error.message });
   }
 };
 
-module.exports = { register, verifyToken };
+module.exports = { register, login };

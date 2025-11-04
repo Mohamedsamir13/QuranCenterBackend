@@ -1,23 +1,22 @@
 // src/routes/authRoutes.js
 const express = require('express');
-const { register, verifyToken } = require('../controllers/authController');
-
-// استدعاء الـ middlewares
-const { loginLimiterByEmail } = require('../middleWares/rateLimiter');
+const { register, login } = require('../controllers/authController');
 const { verifyToken } = require('../middleWares/authMiddleware');
+const { loginLimiterByEmail } = require('../middleWares/rateLimiter');
 
 const router = express.Router();
 
-// 🧱 تسجيل مستخدم جديد (مش محتاج middleware)
+// 🧱 Register new user
 router.post('/register', register);
 
-// 🧱 تسجيل دخول — نحط limiter هنا فقط
+// 🧱 Login with rate limiting
 router.post('/login', loginLimiterByEmail, login);
 
+// 🧱 Get user profile (protected route)
 router.get('/profile', verifyToken, (req, res) => {
   res.status(200).json({
     message: '✅ Token is valid',
-    user: req.user, // جاي من الـ authMiddleware
+    user: req.user, // Comes from authMiddleware
   });
 });
 

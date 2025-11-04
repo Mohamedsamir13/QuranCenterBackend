@@ -1,5 +1,5 @@
 // src/middleWares/authMiddleware.js
-const { admin, db } = require('../config/firebase');
+const authService = require('../services/authService');
 
 const verifyToken = async (req, res, next) => {
   try {
@@ -8,22 +8,17 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({ message: 'Unauthorized: Missing token' });
     }
 
-    const idToken = authHeader.split('Bearer ')[1].trim();
+    const token = authHeader.split('Bearer ')[1].trim();
 
-    // ✅ Verify Firebase token using Admin SDK
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    // ✅ Verify JWT token
+    const user = await authService.verifyToken(token);
 
-    // ✅ Optionally, get user profile from Firestore
-    const userDoc = await db.collection('users').doc(decoded.uid).get();
-    if (!userDoc.exists) {
-      return res.status(404).json({ message: 'User profile not found' });
-    }
-
-    req.user = userDoc.data();
+    // Attach user to request object
+    req.user = user;
     next();
   } catch (err) {
     console.error('❌ Token verification error:', err.message);
-    return res.status(401).json({ message: 'Invalid or expired Firebase token' });
+    return res.status(401).json({ message: err.message || 'Invalid or expired token' });
   }
 };
 
