@@ -1,7 +1,8 @@
+// src/controllers/authController.js
 const authService = require('../services/authService');
 
 /**
- * 🧱 Register Controller
+ * 🧱 Register Controller (uses Firebase Auth)
  */
 const register = async (req, res) => {
   try {
@@ -13,7 +14,11 @@ const register = async (req, res) => {
     }
 
     const user = await authService.register({ name, email, password, type });
-    res.status(201).json({ message: 'User registered successfully', user });
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      user,
+    });
   } catch (error) {
     console.error('Register error:', error.message);
     res.status(400).json({ message: error.message });
@@ -21,7 +26,8 @@ const register = async (req, res) => {
 };
 
 /**
- * 🧱 Login Controller
+ * 🧱 Verify Token Controller
+ * Client sends Firebase ID Token -> verify with Admin SDK
  */
 const login = async (req, res) => {
   try {
@@ -32,11 +38,11 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const result = await authService.login({ email, password });
+    const idToken = authHeader.split('Bearer ')[1];
+    const userData = await authService.verifyFirebaseToken(idToken);
     res.status(200).json({
-      message: 'Login successful',
-      token: result.token,
-      user: result.user,
+      message: 'Token verified successfully',
+      user: userData.profile,
     });
   } catch (error) {
     console.error('Login error:', error.message);

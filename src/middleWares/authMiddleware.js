@@ -4,21 +4,26 @@ const authService = require('../services/authService');
 const verifyToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return res.status(401).json({ message: 'Unauthorized: Missing token' });
     }
 
-    const token = authHeader.split('Bearer ')[1].trim();
+    const idToken = authHeader.split('Bearer ')[1].trim();
 
-    // ✅ Verify JWT token
-    const user = await authService.verifyToken(token);
+    // ✅ Verify Firebase token using Admin SDK
+    const decoded = await admin.auth().verifyIdToken(idToken);
 
-    // Attach user to request object
-    req.user = user;
+    // ✅ Optionally, get user profile from Firestore
+    const userDoc = await db.collection('users').doc(decoded.uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    req.user = userDoc.data();
     next();
   } catch (err) {
     console.error('❌ Token verification error:', err.message);
-    return res.status(401).json({ message: err.message || 'Invalid or expired token' });
+    return res.status(401).json({ message: 'Invalid or expired Firebase token' });
   }
 };
 

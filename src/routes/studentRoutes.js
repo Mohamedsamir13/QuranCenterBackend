@@ -4,9 +4,8 @@ const router = express.Router();
 
 const studentController = require('../controllers/studentController');
 const { getAllLimiter } = require('../middleWares/rateLimiter');
-const { verifyToken } = require('../middleWares/authMiddleware');
 
-router.get('/', verifyToken, getAllLimiter, studentController.getAll);
+router.get('/', getAllLimiter, studentController.getAll);
 
 // باقي الـ routes
 router.post('/create-student',  studentController.create);
