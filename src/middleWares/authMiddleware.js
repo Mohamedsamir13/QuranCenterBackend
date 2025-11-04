@@ -1,5 +1,5 @@
 // src/middleWares/authMiddleware.js
-const authService = require('../services/authService');
+const { admin, db } = require('../config/firebase');
 
 const verifyToken = async (req, res, next) => {
   try {

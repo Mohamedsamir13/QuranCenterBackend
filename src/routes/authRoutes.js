@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, verifyToken } = require('../controllers/authController');
+const { register, login } = require('../controllers/authController');
 
 // استدعاء الـ middlewares
 const { loginLimiterByEmail } = require('../middleWares/rateLimiter');

@@ -26,8 +26,8 @@ const register = async (req, res) => {
 };
 
 /**
- * 🧱 Verify Token Controller
- * Client sends Firebase ID Token -> verify with Admin SDK
+ * 🧱 Login Controller
+ * Basic email and password login
  */
 const login = async (req, res) => {
   try {
@@ -38,11 +38,11 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const idToken = authHeader.split('Bearer ')[1];
-    const userData = await authService.verifyFirebaseToken(idToken);
+    const result = await authService.loginWithEmailPassword({ email, password });
     res.status(200).json({
-      message: 'Token verified successfully',
-      user: userData.profile,
+      message: 'Login successful',
+      token: result.token,
+      user: result.user,
     });
   } catch (error) {
     console.error('Login error:', error.message);
