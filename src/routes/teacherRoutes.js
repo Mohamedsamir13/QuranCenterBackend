@@ -10,7 +10,7 @@ router.get('/debug', (req, res) => {
   res.send('Route works!');
 });
 
-router.get('/', verifyToken, getAllLimiter, teacherController.getAll);
+router.get('/', getAllLimiter, teacherController.getAll);
 router.post('/', teacherController.create);
 router.put('/:id/add-student', teacherController.addStudent);
 
