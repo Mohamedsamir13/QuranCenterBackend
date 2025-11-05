@@ -13,17 +13,21 @@ const register = async ({ name, email, password, type }) => {
     throw new Error('Invalid user type');
   }
 
-  // Create Firebase Auth user
+  // Create Firebase Auth user (with password!)
   const userRecord = await admin.auth().createUser({
     email,
-    password,
+    password, // ✅ This was missing
     displayName: name,
   });
 
+<<<<<<< HEAD
   // Hash password before storing
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // Store extended profile in Firestore
+=======
+  // Store extended profile in Firestore (without password)
+>>>>>>> a0122d7 (ss)
   const userData = new User({
     id: userRecord.uid,
     name,
@@ -33,7 +37,13 @@ const register = async ({ name, email, password, type }) => {
     createdAt: new Date().toISOString(),
   });
 
-  await db.collection('users').doc(userRecord.uid).set({ ...userData });
+  await db.collection('users').doc(userRecord.uid).set({
+    id: userRecord.uid,
+    name,
+    email,
+    type,
+    createdAt: new Date().toISOString(),
+  });
 
   console.log(`✅ User registered: ${email}`);
   return userData;
