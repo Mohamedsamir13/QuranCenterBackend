@@ -13,21 +13,17 @@ const register = async ({ name, email, password, type }) => {
     throw new Error('Invalid user type');
   }
 
-  // Create Firebase Auth user (with password!)
+  // Create Firebase Auth user
   const userRecord = await admin.auth().createUser({
     email,
-    password, // ✅ This was missing
+    password,
     displayName: name,
   });
 
-<<<<<<< HEAD
-  // Hash password before storing
+  // Hash password before storing in Firestore
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Store extended profile in Firestore
-=======
-  // Store extended profile in Firestore (without password)
->>>>>>> a0122d7 (ss)
+  // Prepare user data
   const userData = new User({
     id: userRecord.uid,
     name,
@@ -37,10 +33,12 @@ const register = async ({ name, email, password, type }) => {
     createdAt: new Date().toISOString(),
   });
 
+  // ✅ Save all fields explicitly (to ensure password is stored)
   await db.collection('users').doc(userRecord.uid).set({
     id: userRecord.uid,
     name,
     email,
+    password: hashedPassword,
     type,
     createdAt: new Date().toISOString(),
   });
@@ -61,27 +59,20 @@ const loginWithEmailPassword = async ({ email, password }) => {
 
   // Verify password
   if (user.password) {
-    // If password is hashed, use bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new Error('Invalid email or password');
     }
   } else {
-    // If no password stored, check Firebase Auth (fallback)
-    try {
-      const userRecord = await admin.auth().getUserByEmail(email);
-      // Can't verify password with Admin SDK, so we'll need to store it
-      throw new Error('Password verification not available');
-    } catch (error) {
-      throw new Error('Invalid email or password');
-    }
+    // No password stored in Firestore
+    throw new Error('Password not found. Please re-register your account.');
   }
 
-  // Remove password from response
+  // Remove password from the returned user data
   const userData = { ...user };
   delete userData.password;
-  
-  // Sign JWT token with user details
+
+  // Sign JWT token
   const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
   const token = jwt.sign(
     {
@@ -90,9 +81,9 @@ const loginWithEmailPassword = async ({ email, password }) => {
       type: userData.type,
     },
     jwtSecret,
-    { expiresIn: '7d' } // Token expires in 7 days
+    { expiresIn: '7d' }
   );
-  
+
   console.log(`✅ User logged in: ${email}`);
   return {
     token,
