@@ -1,10 +1,10 @@
-const teacherService = require('../services/teacherService');
+const teacherService = require("../services/teacherService");
 
 exports.getAll = async (req, res) => {
   try {
-    console.log('⚙️ Controller: getAll triggered');
+    console.log("⚙️ Controller: getAll triggered");
     const teachers = await teacherService.getAll();
-    console.log('✅ Teachers fetched successfully');
+    console.log("✅ Teachers fetched successfully");
     res.status(200).json({
       success: true,
       count: teachers.length,
@@ -12,10 +12,18 @@ exports.getAll = async (req, res) => {
     });
   } catch (err) {
     // better logging for debugging
-    console.error('❌ Error fetching teachers:', err && err.message ? err.message : err);
+    console.error(
+      "❌ Error fetching teachers:",
+      err && err.message ? err.message : err
+    );
     if (err && err.stack) console.error(err.stack);
     // include real message for debug (remove before production)
-    res.status(500).json({ success: false, message: err.message || 'Failed to fetch teachers' });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: err.message || "Failed to fetch teachers",
+      });
   }
 };
 
@@ -24,12 +32,16 @@ exports.getById = async (req, res) => {
   try {
     const teacher = await teacherService.getById(req.params.id);
     if (!teacher)
-      return res.status(404).json({ success: false, message: 'Teacher not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Teacher not found" });
 
     res.status(200).json({ success: true, data: teacher });
   } catch (err) {
-    console.error('❌ Error fetching teacher:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch teacher' });
+    console.error("❌ Error fetching teacher:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch teacher" });
   }
 };
 
@@ -38,13 +50,17 @@ exports.create = async (req, res) => {
   try {
     const { name, students = [] } = req.body;
     if (!name)
-      return res.status(400).json({ success: false, message: 'name is required' });
+      return res
+        .status(400)
+        .json({ success: false, message: "name is required" });
 
     const newTeacher = await teacherService.create({ name, students });
     res.status(201).json({ success: true, data: newTeacher });
   } catch (err) {
-    console.error('❌ Error creating teacher:', err);
-    res.status(500).json({ success: false, message: 'Failed to create teacher' });
+    console.error("❌ Error creating teacher:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to create teacher" });
   }
 };
 
@@ -53,18 +69,62 @@ exports.addStudent = async (req, res) => {
   const { id } = req.params;
   const { studentId } = req.body;
 
-  console.log('📩 Received request to add student:', studentId, 'to teacher:', id);
+  console.log(
+    "📩 Received request to add student:",
+    studentId,
+    "to teacher:",
+    id
+  );
 
   if (!studentId) {
-    return res.status(400).json({ success: false, message: "studentId required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "studentId required" });
   }
 
   try {
     await teacherService.addStudent(id, studentId);
-    console.log('✅ Successfully added student', studentId, 'to teacher', id);
+    console.log("✅ Successfully added student", studentId, "to teacher", id);
     res.status(200).json({ success: true });
   } catch (error) {
-    console.error('🔥 ERROR in addStudent:', error);
+    console.error("🔥 ERROR in addStudent:", error);
     res.status(500).json({ success: false, message: "Failed to add student" });
+  }
+};
+// 🟡 Update teacher (مثلاً تعديل الاسم)
+exports.update = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const updated = await teacherService.update(id, updates);
+    if (!updated) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Teacher not found" });
+    }
+
+    res.status(200).json({ success: true, data: updated });
+  } catch (err) {
+    console.error("❌ Error updating teacher:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to update teacher" });
+  }
+};
+
+// 🔴 Delete teacher
+exports.remove = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await teacherService.remove(id);
+    res
+      .status(200)
+      .json({ success: true, message: "Teacher deleted successfully" });
+  } catch (err) {
+    console.error("❌ Error deleting teacher:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to delete teacher" });
   }
 };

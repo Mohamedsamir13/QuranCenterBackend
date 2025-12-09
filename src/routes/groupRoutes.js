@@ -3,11 +3,12 @@ const express = require("express");
 const router = express.Router();
 const groupController = require("../controllers/groupsController");
 const { verifyToken } = require("../middleWares/authMiddleware");
+const { getAllLimiter } = require("../middleWares/rateLimiter");
 
 // ✅ كل الراوتس دي مش هتشتغل إلا لو فيه توكن صحيح
 
 // GET /api/groups
-router.get("/", verifyToken, groupController.getAll);
+router.get("/", getAllLimiter, groupController.getAll);
 
 // POST /api/groups
 router.post("/", verifyToken, groupController.create);

@@ -1,19 +1,32 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const teacherController = require('../controllers/teacherController');
-const { getAllLimiter } = require('../middleWares/rateLimiter');
-const { verifyToken } = require('../middleWares/authMiddleware');
+const teacherController = require("../controllers/teacherController");
+const { getAllLimiter } = require("../middleWares/rateLimiter");
+const { verifyToken } = require("../middleWares/authMiddleware");
+
 console.log("📁 teatcherRoutes.js LOADED ✅");
 
-router.get('/debug', (req, res) => {
-  console.log('🔥 /api/teachers/debug hit');
-  res.send('Route works!');
+router.get("/debug", (req, res) => {
+  console.log("🔥 /api/teachers/debug hit");
+  res.send("Route works!");
 });
 
-router.get('/', getAllLimiter, teacherController.getAll);
-router.post('/', teacherController.create);
-router.put('/:id/add-student', teacherController.addStudent);
+// 🟢 Get all teachers
+router.get("/", getAllLimiter, teacherController.getAll);
 
-router.get('/:id', teacherController.getById);
+// 🟢 Create new teacher
+router.post("/", teacherController.create);
+
+// 🟣 Add student to teacher
+router.put("/:id/add-student", teacherController.addStudent);
+
+// 🟢 Get teacher by ID
+router.get("/:id", teacherController.getById);
+
+// 🟡 Update teacher (name أو أي بيانات تانية)
+router.put("/:id", teacherController.update); // ✅ هنا مفيش () في الآخر
+
+// 🔴 Delete teacher
+router.delete("/:id", teacherController.remove); // 👈 NEW
 
 module.exports = router;
