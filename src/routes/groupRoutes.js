@@ -23,7 +23,7 @@ router.put("/:id", verifyToken, groupController.update);
 router.delete("/:id", verifyToken, groupController.remove);
 
 // Add / Remove student in a group
-router.post("/:id/add-student", verifyToken, groupController.addStudent);
+router.post("/:id/add-student", groupController.addStudent);
 router.post("/:id/remove-student", verifyToken, groupController.removeStudent);
 
 module.exports = router;
