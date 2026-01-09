@@ -5,7 +5,7 @@ const groupController = require("../controllers/groupsController");
 const { verifyToken } = require("../middleWares/authMiddleware");
 const { getAllLimiter } = require("../middleWares/rateLimiter");
 
-// ✅ كل الراوتس دي مش هتشتغل إلا لو فيه توكن صحيح
+///ALL ROUTES PREFIXED WITH /api/groups TOKEN NEEDED FOR ALL ROUTES EXCEPT GET ALL GROUPS AND ADD STUDENT TO GROUP
 
 // GET /api/groups
 router.get("/", getAllLimiter, groupController.getAll);
@@ -14,7 +14,7 @@ router.get("/", getAllLimiter, groupController.getAll);
 router.post("/", verifyToken, groupController.create);
 
 // GET /api/groups/:id
-router.get("/:id", verifyToken, groupController.getById);
+router.get("/:id", groupController.getById);
 
 // PUT /api/groups/:id
 router.put("/:id", verifyToken, groupController.update);
