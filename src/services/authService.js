@@ -10,9 +10,9 @@ const jwt = require("jsonwebtoken");
  */
 
 const register = async ({ name, email, password, type }) => {
-  if (type === "Manager") {
-    throw new Error("Registering as Manager is not allowed");
-  }
+  // if (type === "Manager") {
+  //   throw new Error("Registering as Manager is not allowed");
+  // }
 
   if (!["Parent", "Teacher", "Student"].includes(type)) {
     throw new Error("Invalid user type");
