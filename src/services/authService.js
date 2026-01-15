@@ -14,7 +14,7 @@ const register = async ({ name, email, password, type }) => {
   //   throw new Error("Registering as Manager is not allowed");
   // }
 
-  if (!["Parent", "Teacher", "Student", "Manager"].includes(type)) {
+  if (!["Parent", "Teacher", "Student"].includes(type)) {
     throw new Error("Invalid user type");
   }
 
