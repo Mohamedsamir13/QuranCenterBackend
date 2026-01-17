@@ -2,6 +2,7 @@
 const { db, admin } = require("../config/firebase");
 const StudentModel = require("../models/studentModel");
 const ReportModel = require("../models/reportModel");
+const AssignmentModel = require("../models/assignmentModel");
 
 const studentsCollection = db.collection("students");
 const teachersCollection = db.collection("teachers");
@@ -88,4 +89,44 @@ exports.addReportToStudent = async (studentId, reportData) => {
   await reportRef.update({ id: reportRef.id });
 
   return { ...reportData, id: reportRef.id };
+};
+
+// Add Assignment
+exports.addAssignmentToStudent = async (studentId, assignmentData) => {
+  const assignment = new AssignmentModel(assignmentData);
+  const assignmentsRef = studentsCollection
+    .doc(studentId)
+    .collection("assignments");
+  const assignmentRef = await assignmentsRef.add(assignment.toFirestore());
+  await assignmentRef.update({ id: assignmentRef.id });
+  return { ...assignmentData, id: assignmentRef.id };
+};
+
+// Get Assignments
+exports.getAssignmentsForStudent = async (studentId) => {
+  const snap = await studentsCollection
+    .doc(studentId)
+    .collection("assignments")
+    .get();
+  return snap.docs.map(AssignmentModel.fromFirestore);
+};
+
+// Delete Assignment
+exports.deleteAssignment = async (studentId, assignmentId) => {
+  const ref = studentsCollection
+    .doc(studentId)
+    .collection("assignments")
+    .doc(assignmentId);
+  await ref.delete();
+  return true;
+};
+
+// Update Assignment
+exports.updateAssignment = async (studentId, assignmentId, data) => {
+  const ref = studentsCollection
+    .doc(studentId)
+    .collection("assignments")
+    .doc(assignmentId);
+  await ref.update(data);
+  return { id: assignmentId, ...data };
 };

@@ -152,3 +152,66 @@ exports.remove = async (req, res) => {
       .json({ success: false, message: "Failed to delete student" });
   }
 };
+exports.addAssignment = async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const assignment = req.body;
+
+    if (!assignment.sura || !assignment.startPage || !assignment.endPage) {
+      return res.status(400).json({
+        success: false,
+        message: "Sura, startPage and endPage are required",
+      });
+    }
+
+    const result = await studentService.addAssignment(studentId, assignment);
+
+    res.status(200).json({
+      success: true,
+      message: "Assignment added successfully",
+      data: result,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.getAssignments = async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const assignments = await studentService.getAssignments(studentId);
+    res.status(200).json({ success: true, data: assignments });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.updateAssignment = async (req, res) => {
+  try {
+    const { id, assignmentId } = req.params;
+    const data = req.body;
+
+    const updated = await studentService.updateAssignment(
+      id,
+      assignmentId,
+      data,
+    );
+    res.status(200).json({ success: true, data: updated });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.deleteAssignment = async (req, res) => {
+  try {
+    const { id, assignmentId } = req.params;
+    await studentService.deleteAssignment(id, assignmentId);
+    res.status(200).json({ success: true, message: "Assignment deleted" });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
