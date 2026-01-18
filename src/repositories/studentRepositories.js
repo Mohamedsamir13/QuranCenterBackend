@@ -19,16 +19,11 @@ exports.getStudentById = async (id) => {
   if (!doc.exists) return null;
 
   const student = StudentModel.fromFirestore(doc);
-
-  // Get reports
   const reportsSnap = await studentsCollection
     .doc(id)
     .collection("reports")
     .get();
-  let reports = reportsSnap.docs.map(ReportModel.fromFirestore);
-
-  // Sort reports: latest first
-  reports.sort((a, b) => b.date.toDate() - a.date.toDate());
+  const reports = reportsSnap.docs.map(ReportModel.fromFirestore);
 
   return { ...student, reports };
 };
@@ -115,12 +110,9 @@ exports.getAssignmentsForStudent = async (studentId) => {
     .doc(studentId)
     .collection("assignments")
     .get();
-  const assignments = snap.docs.map(AssignmentModel.fromFirestore);
-
-  // Sort newest first
-  assignments.sort((a, b) => b.assignedDate.toDate() - a.assignedDate.toDate());
-  return assignments;
+  return snap.docs.map(AssignmentModel.fromFirestore);
 };
+
 // Delete Assignment
 exports.deleteAssignment = async (studentId, assignmentId) => {
   const ref = studentsCollection
