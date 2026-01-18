@@ -5,6 +5,7 @@ class AssignmentModel {
     sura,
     startPage,
     endPage,
+    sessionType,
     assignedDate,
     dueDate,
     notes = "",
@@ -13,6 +14,7 @@ class AssignmentModel {
     this.sura = sura;
     this.startPage = startPage;
     this.endPage = endPage;
+    this.sessionType = sessionType;
     this.assignedDate = assignedDate;
     this.dueDate = dueDate;
     this.notes = notes;
@@ -26,6 +28,7 @@ AssignmentModel.fromFirestore = (doc) => {
     sura: data.sura,
     startPage: data.startPage,
     endPage: data.endPage,
+    sessionType: data.sessionType,
     assignedDate: data.assignedDate?.toDate
       ? data.assignedDate.toDate()
       : new Date(data.assignedDate),
@@ -43,6 +46,7 @@ AssignmentModel.prototype.toFirestore = function () {
     sura: this.sura,
     startPage: this.startPage,
     endPage: this.endPage,
+    sessionType: this.sessionType,
     assignedDate: this.assignedDate,
     dueDate: this.dueDate,
     notes: this.notes,

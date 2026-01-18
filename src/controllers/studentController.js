@@ -82,10 +82,13 @@ exports.addReport = async (req, res) => {
     const id = req.params.id;
     const report = req.body;
 
-    if (!report.date || !report.sura) {
+    if (!report.date || !report.sura || !report.startAya || !report.endAya) {
       return res
         .status(400)
-        .json({ success: false, message: "Report must include date and sura" });
+        .json({
+          success: false,
+          message: "Report must include date, sura, startAya and endAya",
+        });
     }
 
     await studentService.addReport(id, report);
@@ -157,10 +160,15 @@ exports.addAssignment = async (req, res) => {
     const studentId = req.params.id;
     const assignment = req.body;
 
-    if (!assignment.sura || !assignment.startPage || !assignment.endPage) {
+    if (
+      !assignment.sura ||
+      !assignment.startPage ||
+      !assignment.endPage ||
+      !assignment.sessionType
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Sura, startPage and endPage are required",
+        message: "Sura, startPage, endPage and sessionType are required",
       });
     }
 
