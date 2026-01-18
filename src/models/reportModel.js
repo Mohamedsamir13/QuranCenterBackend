@@ -4,7 +4,8 @@ class ReportModel {
     date,
     minutes,
     sura,
-    aya,
+    startAya,
+    endAya,
     remaining_pages,
     performance,
     notes,
@@ -16,7 +17,8 @@ class ReportModel {
     this.date = date;
     this.minutes = minutes;
     this.sura = sura;
-    this.aya = aya;
+    this.startAya = startAya;
+    this.endAya = endAya;
     this.remaining_pages = remaining_pages;
     this.performance = performance;
     this.notes = notes;
@@ -32,6 +34,8 @@ class ReportModel {
       ...data,
       teacherId: data.teacherId ?? null,
       report_for_parents: data.report_for_parents ?? null,
+      startAya: data.startAya,
+      endAya: data.endAya,
       type_of_session: data.type_of_session ?? null, // 👈 NEW
     });
   }
@@ -41,7 +45,8 @@ class ReportModel {
       date: this.date,
       minutes: this.minutes,
       sura: this.sura,
-      aya: this.aya,
+      startAya: this.startAya,
+      endAya: this.endAya,
       remaining_pages: this.remaining_pages,
       performance: this.performance,
       notes: this.notes,
