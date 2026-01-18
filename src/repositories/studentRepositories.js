@@ -19,14 +19,10 @@ exports.getStudentById = async (id) => {
   if (!doc.exists) return null;
 
   const student = StudentModel.fromFirestore(doc);
-
-  // جلب التقارير مرتبة حسب createdAt نزوليًا
   const reportsSnap = await studentsCollection
     .doc(id)
     .collection("reports")
-    .orderBy("createdAt", "desc") // آخر تقرير أولًا
     .get();
-
   const reports = reportsSnap.docs.map(ReportModel.fromFirestore);
 
   return { ...student, reports };
@@ -87,22 +83,19 @@ exports.deleteStudent = async (id) => {
 
 // ✅ Add report
 exports.addReportToStudent = async (studentId, reportData) => {
-  const report = new ReportModel({
-    ...reportData,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(), // هذا يضمن ترتيب صحيح
-  });
+  console.log("🔥 FINAL REPORT DATA =>", reportData);
+
+  const report = new ReportModel(reportData);
   const reportsRef = studentsCollection.doc(studentId).collection("reports");
   const reportRef = await reportsRef.add(report.toFirestore());
   await reportRef.update({ id: reportRef.id });
+
   return { ...reportData, id: reportRef.id };
 };
 
 // Add Assignment
 exports.addAssignmentToStudent = async (studentId, assignmentData) => {
-  const assignment = new AssignmentModel({
-    ...assignmentData,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  const assignment = new AssignmentModel(assignmentData);
   const assignmentsRef = studentsCollection
     .doc(studentId)
     .collection("assignments");
@@ -116,9 +109,7 @@ exports.getAssignmentsForStudent = async (studentId) => {
   const snap = await studentsCollection
     .doc(studentId)
     .collection("assignments")
-    .orderBy("createdAt", "desc") // آخر واجب أولًا
     .get();
-
   return snap.docs.map(AssignmentModel.fromFirestore);
 };
 
