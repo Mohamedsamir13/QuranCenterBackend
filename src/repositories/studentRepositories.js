@@ -83,6 +83,8 @@ exports.deleteStudent = async (id) => {
 
 // ✅ Add report
 exports.addReportToStudent = async (studentId, reportData) => {
+  console.log("🔥 FINAL REPORT DATA =>", reportData);
+
   const report = new ReportModel(reportData);
   const reportsRef = studentsCollection.doc(studentId).collection("reports");
   const reportRef = await reportsRef.add(report.toFirestore());
