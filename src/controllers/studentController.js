@@ -82,13 +82,11 @@ exports.addReport = async (req, res) => {
     const id = req.params.id;
     const report = req.body;
 
-    if (!report.date || !report.sura || !report.startAya || !report.endAya) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Report must include date, sura, startAya and endAya",
-        });
+    if (!report.date || !report.sura) {
+      return res.status(400).json({
+        success: false,
+        message: "Report must include date, sura, startAya and endAya",
+      });
     }
 
     await studentService.addReport(id, report);
