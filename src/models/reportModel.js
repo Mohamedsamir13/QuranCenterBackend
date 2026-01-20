@@ -59,3 +59,4 @@ class ReportModel {
     });
   }
 }
+module.exports = ReportModel;
