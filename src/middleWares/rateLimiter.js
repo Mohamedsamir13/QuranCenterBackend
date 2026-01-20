@@ -1,15 +1,15 @@
 // src/middleWares/rateLimiter.js
-const rateLimit = require('express-rate-limit');
-const { ipKeyGenerator } = require('express-rate-limit'); 
+const rateLimit = require("express-rate-limit");
+const { ipKeyGenerator } = require("express-rate-limit");
 
 // 🔹 login limiter
 const loginLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, 
+  windowMs: 60 * 60 * 1000,
   max: 5,
-  message: { message: 'Too many login attempts. Try again after an hour.' },
+  message: { message: "Too many login attempts. Try again after an hour." },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true
+  skipSuccessfulRequests: true,
 });
 
 // 🔹 login limiter by email
@@ -17,23 +17,37 @@ const loginLimiterByEmail = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 7,
   keyGenerator: (req) => {
-    return (req.body && req.body.email)
-      ? req.body.email
-      : ipKeyGenerator(req); 
+    return req.body && req.body.email ? req.body.email : ipKeyGenerator(req);
   },
-  message: { message: 'Too many login attempts for this email. Try again after an hour.' },
+  message: {
+    message: "Too many login attempts for this email. Try again after an hour.",
+  },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true
+  skipSuccessfulRequests: true,
 });
 
-// 🔹 getAll limiter
+// 🔹 GET requests limiter
 const getAllLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
-  message: { message: 'Too many requests. Please slow down.' },
+  message: { message: "Too many requests. Please slow down." },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
 });
 
-module.exports = { loginLimiter, loginLimiterByEmail, getAllLimiter };
+// 🔹 General write operations limiter (POST / PUT / DELETE)
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { message: "Too many write operations. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = {
+  loginLimiter,
+  loginLimiterByEmail,
+  getAllLimiter,
+  writeLimiter,
+};

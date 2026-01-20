@@ -1,38 +1,30 @@
-// routes/studentRoutes.js
 const express = require("express");
 const router = express.Router();
 const studentController = require("../controllers/studentController");
-const { getAllLimiter } = require("../middleWares/rateLimiter");
+const { getAllLimiter, writeLimiter } = require("../middleWares/rateLimiter");
 
 router.get("/", getAllLimiter, studentController.getAll);
-router.post("/create-student", studentController.create);
+router.get("/:id", getAllLimiter, studentController.getById);
 
-// 🔥 NEW CRUD routes
-router.put("/update-student/:id", studentController.update);
+router.post("/create-student", writeLimiter, studentController.create);
+router.put("/update-student/:id", writeLimiter, studentController.update);
+router.delete("/delete-student/:id", writeLimiter, studentController.remove);
 
-// Delete student
-router.delete("/delete-student/:id", studentController.remove);
+// Reports
+router.post("/:id/reports", writeLimiter, studentController.addReport);
 
-// Add report
-router.post("/:id/reports", studentController.addReport);
-
-// Add assignment
-router.post("/:id/assignments", studentController.addAssignment);
-
-// Get assignments
-router.get("/:id/assignments", studentController.getAssignments);
-
-// Update assignment
+// Assignments
+router.post("/:id/assignments", writeLimiter, studentController.addAssignment);
+router.get("/:id/assignments", getAllLimiter, studentController.getAssignments);
 router.put(
   "/:id/assignments/:assignmentId",
+  writeLimiter,
   studentController.updateAssignment,
 );
-
-// Delete assignment
 router.delete(
   "/:id/assignments/:assignmentId",
+  writeLimiter,
   studentController.deleteAssignment,
 );
-router.get("/:id", studentController.getById);
 
 module.exports = router;

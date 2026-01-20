@@ -7,6 +7,7 @@ const studentRoutes = require("../src/routes/studentRoutes");
 const teacherRoutes = require("../src/routes/teacherRoutes");
 const authRoutes = require("../src/routes/authRoutes");
 const groupRoutes = require("../src/routes/groupRoutes");
+const goalsRoutes = require("../src/routes/goalsRoutes");
 
 const app = express();
 app.use(express.json());
@@ -17,7 +18,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/teachers", teacherRoutes);
 app.use("/api/groups", groupRoutes);
-
+app.use("/api/goals", goalsRoutes);
 // 🧠 Honeypot trap content (funny fake secrets)
 const funnyTrapText = `
 🤫 Ohhh, so you found secrets.txt huh?
@@ -37,7 +38,7 @@ P.S. We just logged your IP → Have a nice day, Mr. Hacker 🕵️‍♂️
 app.get("/secrets.txt", (req, res) => {
   const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
   console.log(
-    `⚠️ Hacker alert! IP: ${ip} tried to access secrets.txt at ${new Date().toISOString()}`
+    `⚠️ Hacker alert! IP: ${ip} tried to access secrets.txt at ${new Date().toISOString()}`,
   );
   res.type("text").status(403).send(funnyTrapText);
 });
@@ -46,7 +47,7 @@ app.get("/secrets.txt", (req, res) => {
 app.get("/passwords.txt", (req, res) => {
   const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
   console.log(
-    `⚠️ Hacker alert! IP: ${ip} tried to access passwords.txt at ${new Date().toISOString()}`
+    `⚠️ Hacker alert! IP: ${ip} tried to access passwords.txt at ${new Date().toISOString()}`,
   );
   res.type("text").status(403).send(`
 😈 Welcome to passwords.txt!
