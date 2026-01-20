@@ -1,19 +1,20 @@
+// models/dailyPlansModel.js
 class DailyPlan {
   constructor({
-    date,
     memorization,
     revision,
-    status = "planned",
     notes = "",
     createdAt = new Date(),
     updatedAt = new Date(),
   }) {
-    this.date = date;
+    this.memorization = memorization;
+    // مثال:
+    // { sura: "يوسف", fromPage: 1, pagesCount: 3 }
 
-    this.memorization = memorization; // { sura, fromPage, toPage }
-    this.revision = revision; // { sura, fromPage, toPage }
+    this.revision = revision;
+    // مثال:
+    // { sura: "البقرة", fromPage: 1, pagesCount: 10 }
 
-    this.status = status; // planned | completed | postponed
     this.notes = notes;
 
     this.createdAt = createdAt;
@@ -22,10 +23,8 @@ class DailyPlan {
 
   toFirestore() {
     return {
-      date: this.date,
       memorization: this.memorization,
       revision: this.revision,
-      status: this.status,
       notes: this.notes,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
