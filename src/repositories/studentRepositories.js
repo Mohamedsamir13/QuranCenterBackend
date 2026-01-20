@@ -10,7 +10,7 @@ const teachersCollection = db.collection("teachers");
 // ✅ Get all students
 exports.getAllStudents = async () => {
   const snapshot = await studentsCollection.get();
-  return snapshot.docs.map(StudentModel.fromFirestore);
+  return snapshot.docs.map((doc) => StudentModel.fromFirestore(doc));
 };
 
 // ✅ Get student by ID (with reports)
@@ -25,7 +25,7 @@ exports.getStudentById = async (id) => {
     .orderBy("createdAt", "desc") // 👈 الترتيب الحقيقي
 
     .get();
-  const reports = reportsSnap.docs.map(ReportModel.fromFirestore);
+  const reports = reportsSnap.docs.map((doc) => ReportModel.fromFirestore(doc));
 
   return { ...student, reports };
 };
