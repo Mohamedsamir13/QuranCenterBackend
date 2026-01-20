@@ -22,6 +22,8 @@ exports.getStudentById = async (id) => {
   const reportsSnap = await studentsCollection
     .doc(id)
     .collection("reports")
+    .orderBy("createdAt", "desc") // 👈 الترتيب الحقيقي
+
     .get();
   const reports = reportsSnap.docs.map(ReportModel.fromFirestore);
 

@@ -11,7 +11,8 @@ class ReportModel {
     notes,
     teacherId = null,
     report_for_parents = null,
-    type_of_session = null, // 👈 NEW FIELD (tasmee3 or muraja3a)
+    type_of_session = null,
+    createdAt = null, // 👈 NEW
   }) {
     this.id = id;
     this.date = date;
@@ -22,22 +23,10 @@ class ReportModel {
     this.remaining_pages = remaining_pages;
     this.performance = performance;
     this.notes = notes;
-    this.teacherId = teacherId ?? null;
-    this.report_for_parents = report_for_parents ?? null;
-    this.type_of_session = type_of_session ?? null; // 👈 NEW
-  }
-
-  static fromFirestore(doc) {
-    const data = doc.data();
-    return new ReportModel({
-      id: doc.id,
-      ...data,
-      teacherId: data.teacherId ?? null,
-      report_for_parents: data.report_for_parents ?? null,
-      startAya: data.startAya,
-      endAya: data.endAya,
-      type_of_session: data.type_of_session ?? null, // 👈 NEW
-    });
+    this.teacherId = teacherId;
+    this.report_for_parents = report_for_parents;
+    this.type_of_session = type_of_session;
+    this.createdAt = createdAt;
   }
 
   toFirestore() {
@@ -50,15 +39,23 @@ class ReportModel {
       remaining_pages: this.remaining_pages,
       performance: this.performance,
       notes: this.notes,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(), // 👈 أهم سطر
       ...(this.teacherId ? { teacherId: this.teacherId } : {}),
       ...(this.report_for_parents
         ? { report_for_parents: this.report_for_parents }
         : {}),
       ...(this.type_of_session
         ? { type_of_session: this.type_of_session }
-        : {}), // 👈 NEW
+        : {}),
     };
   }
-}
 
-module.exports = ReportModel;
+  static fromFirestore(doc) {
+    const data = doc.data();
+    return new ReportModel({
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() ?? null,
+    });
+  }
+}
