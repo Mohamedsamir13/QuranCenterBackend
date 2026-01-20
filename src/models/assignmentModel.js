@@ -1,4 +1,5 @@
 // models/assignmentModel.js
+const { admin } = require("../config/firebase"); // 👈 تأكد من المسار الصحيح
 class AssignmentModel {
   constructor({
     id,
@@ -9,6 +10,7 @@ class AssignmentModel {
     assignedDate,
     dueDate,
     notes = "",
+    createdAt = null, // 👈 NEW
   }) {
     this.id = id;
     this.sura = sura;
@@ -18,6 +20,7 @@ class AssignmentModel {
     this.assignedDate = assignedDate;
     this.dueDate = dueDate;
     this.notes = notes;
+    this.createdAt = createdAt;
   }
 }
 
@@ -38,6 +41,7 @@ AssignmentModel.fromFirestore = (doc) => {
         ? new Date(data.dueDate)
         : null,
     notes: data.notes || "",
+    createdAt: data.createdAt?.toDate?.() ?? null,
   });
 };
 
@@ -50,6 +54,7 @@ AssignmentModel.prototype.toFirestore = function () {
     assignedDate: this.assignedDate,
     dueDate: this.dueDate,
     notes: this.notes,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(), // 👈 أهم سطر
   };
 };
 

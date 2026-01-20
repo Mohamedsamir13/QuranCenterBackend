@@ -111,6 +111,7 @@ exports.getAssignmentsForStudent = async (studentId) => {
   const snap = await studentsCollection
     .doc(studentId)
     .collection("assignments")
+    .orderBy("createdAt", "desc")
     .get();
   return snap.docs.map(AssignmentModel.fromFirestore);
 };
