@@ -1,3 +1,5 @@
+const { admin } = require("../config/firebase"); // 👈 تأكد من المسار الصحيح
+
 class ReportModel {
   constructor({
     id,
