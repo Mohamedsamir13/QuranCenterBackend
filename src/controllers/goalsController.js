@@ -20,26 +20,31 @@ exports.updateStageGoal = async (req, res) => {
 };
 
 // Daily Plans
-exports.createDailyPlan = async (req, res) => {
+// Daily Plan (Singleton)
+
+exports.upsertDailyPlan = async (req, res) => {
   const { id } = req.params;
-  const data = await service.addDailyPlan(id, req.body);
-  res.status(201).json({ success: true, data });
+  const data = await service.saveDailyPlan(id, req.body);
+
+  res.status(200).json({
+    success: true,
+    data,
+  });
 };
 
-exports.getDailyPlans = async (req, res) => {
+exports.getDailyPlan = async (req, res) => {
   const { id } = req.params;
-  const data = await service.getDailyPlans(id);
-  res.json({ success: true, data });
-};
+  const data = await service.getDailyPlan(id);
 
-exports.updateDailyPlan = async (req, res) => {
-  const { id, planId } = req.params;
-  const data = await service.updateDailyPlan(id, planId, req.body);
-  res.json({ success: true, data });
+  res.json({
+    success: true,
+    data,
+  });
 };
 
 exports.deleteDailyPlan = async (req, res) => {
-  const { id, planId } = req.params;
-  await service.deleteDailyPlan(id, planId);
+  const { id } = req.params;
+  await service.deleteDailyPlan(id);
+
   res.json({ success: true });
 };

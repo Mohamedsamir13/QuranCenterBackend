@@ -13,17 +13,9 @@ router.put(
 );
 
 // Daily Plans
-router.post("/:id/daily-plans", writeLimiter, controller.createDailyPlan);
-router.get("/:id/daily-plans", getAllLimiter, controller.getDailyPlans);
-router.put(
-  "/:id/daily-plans/:planId",
-  writeLimiter,
-  controller.updateDailyPlan,
-);
-router.delete(
-  "/:id/daily-plans/:planId",
-  writeLimiter,
-  controller.deleteDailyPlan,
-);
+router.put("/:id/daily-plan", writeLimiter, controller.upsertDailyPlan);
 
+router.get("/:id/daily-plan", getAllLimiter, controller.getDailyPlan);
+
+router.delete("/:id/daily-plan", writeLimiter, controller.deleteDailyPlan);
 module.exports = router;

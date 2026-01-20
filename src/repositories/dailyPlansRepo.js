@@ -1,47 +1,41 @@
 const { db } = require("../config/firebase");
 const DailyPlan = require("../models/dailyPlansModel");
 
-exports.createDailyPlan = async (studentId, data) => {
+// ثابت: Document واحد فقط لكل طالب
+const dailyPlanRef = (studentId) =>
+  db.collection("students").doc(studentId).collection("meta").doc("dailyPlan");
+
+/**
+ * Create OR Update Daily Plan (Upsert)
+ * الطالب لا يمكن أن يكون له أكثر من DailyPlan
+ */
+exports.saveDailyPlan = async (studentId, data) => {
   const plan = new DailyPlan(data);
-  const ref = await db
-    .collection("students")
-    .doc(studentId)
-    .collection("dailyPlans")
-    .add(plan.toFirestore());
 
-  await ref.update({ id: ref.id });
-  return { id: ref.id, ...plan };
+  const ref = dailyPlanRef(studentId);
+
+  await ref.set(plan.toFirestore(), { merge: true });
+
+  return { id: "dailyPlan", ...plan };
 };
 
-exports.getDailyPlans = async (studentId) => {
-  const snap = await db
-    .collection("students")
-    .doc(studentId)
-    .collection("dailyPlans")
-    .orderBy("date", "desc")
-    .get();
+/**
+ * Get Daily Plan
+ */
+exports.getDailyPlan = async (studentId) => {
+  const ref = dailyPlanRef(studentId);
+  const doc = await ref.get();
 
-  return snap.docs.map(DailyPlan.fromFirestore);
+  if (!doc.exists) return null;
+
+  return { id: doc.id, ...doc.data() };
 };
 
-exports.updateDailyPlan = async (studentId, planId, data) => {
-  const ref = db
-    .collection("students")
-    .doc(studentId)
-    .collection("dailyPlans")
-    .doc(planId);
-
-  await ref.update({ ...data, updatedAt: new Date() });
-  return { id: planId, ...data };
-};
-
-exports.deleteDailyPlan = async (studentId, planId) => {
-  await db
-    .collection("students")
-    .doc(studentId)
-    .collection("dailyPlans")
-    .doc(planId)
-    .delete();
-
+/**
+ * Delete Daily Plan (اختياري)
+ */
+exports.deleteDailyPlan = async (studentId) => {
+  const ref = dailyPlanRef(studentId);
+  await ref.delete();
   return true;
 };
