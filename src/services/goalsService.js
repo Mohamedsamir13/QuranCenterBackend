@@ -1,4 +1,4 @@
-const stageRepo = require("../repositories/stageGoalRepo");
+const stageRepo = require("../repositories/goalsRepo");
 const dailyRepo = require("../repositories/dailyPlansRepo");
 
 exports.saveStageGoal = (studentId, data) =>

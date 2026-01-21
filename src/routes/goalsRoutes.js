@@ -3,19 +3,14 @@ const router = express.Router();
 const controller = require("../controllers/goalsController");
 const { getAllLimiter, writeLimiter } = require("../middleWares/rateLimiter");
 
-// Stage Goals
-router.post("/:id/stage-goals", writeLimiter, controller.createStageGoal);
-router.get("/:id/stage-goals", getAllLimiter, controller.getStageGoals);
-router.put(
-  "/:id/stage-goals/:goalId",
-  writeLimiter,
-  controller.updateStageGoal,
-);
+// Stage Goal (Singleton)
+router.put("/:id/stage-goal", writeLimiter, controller.upsertStageGoal);
+router.get("/:id/stage-goal", getAllLimiter, controller.getStageGoal);
+router.delete("/:id/stage-goal", writeLimiter, controller.deleteStageGoal);
 
-// Daily Plans
+// Daily Plan (Singleton)
 router.put("/:id/daily-plan", writeLimiter, controller.upsertDailyPlan);
-
 router.get("/:id/daily-plan", getAllLimiter, controller.getDailyPlan);
-
 router.delete("/:id/daily-plan", writeLimiter, controller.deleteDailyPlan);
+
 module.exports = router;
