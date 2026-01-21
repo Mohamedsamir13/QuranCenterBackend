@@ -1,41 +1,26 @@
 const { db } = require("../config/firebase");
-const DailyPlan = require("../models/dailyPlansModel");
+const DailyPlanModel = require("../models/dailyPlansModel");
 
-// ثابت: Document واحد فقط لكل طالب
-const dailyPlanRef = (studentId) =>
-  db.collection("students").doc(studentId).collection("meta").doc("dailyPlan");
+const studentRef = (id) => db.collection("students").doc(id);
 
-/**
- * Create OR Update Daily Plan (Upsert)
- * الطالب لا يمكن أن يكون له أكثر من DailyPlan
- */
-exports.saveDailyPlan = async (studentId, data) => {
-  const plan = new DailyPlan(data);
+exports.upsertDailyPlan = async (studentId, data) => {
+  await studentRef(studentId).update({
+    dailyPlan: DailyPlanModel.toFirestore(data),
+  });
 
-  const ref = dailyPlanRef(studentId);
-
-  await ref.set(plan.toFirestore(), { merge: true });
-
-  return { id: "dailyPlan", ...plan };
+  return data;
 };
 
-/**
- * Get Daily Plan
- */
 exports.getDailyPlan = async (studentId) => {
-  const ref = dailyPlanRef(studentId);
-  const doc = await ref.get();
-
+  const doc = await studentRef(studentId).get();
   if (!doc.exists) return null;
 
-  return { id: doc.id, ...doc.data() };
+  return doc.data().dailyPlan || null;
 };
 
-/**
- * Delete Daily Plan (اختياري)
- */
 exports.deleteDailyPlan = async (studentId) => {
-  const ref = dailyPlanRef(studentId);
-  await ref.delete();
+  await studentRef(studentId).update({
+    dailyPlan: null,
+  });
   return true;
 };

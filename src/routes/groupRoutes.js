@@ -1,31 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const groupController = require("../controllers/groupsController");
-const { verifyToken } = require("../middleWares/authMiddleware");
+const controller = require("../controllers/goalsController");
 const { getAllLimiter, writeLimiter } = require("../middleWares/rateLimiter");
 
-// GET all groups
-router.get("/", getAllLimiter, groupController.getAll);
+// Stage Goal (Singleton)
+router.put("/:id/stage-goal", writeLimiter, controller.upsertStageGoal);
+router.get("/:id/stage-goal", getAllLimiter, controller.getStageGoal);
+router.delete("/:id/stage-goal", writeLimiter, controller.deleteStageGoal);
 
-// Create group
-router.post("/", verifyToken, writeLimiter, groupController.create);
-
-// Get group by id
-router.get("/:id", getAllLimiter, groupController.getById);
-
-// Update group
-router.put("/:id", verifyToken, writeLimiter, groupController.update);
-
-// Delete group
-router.delete("/:id", verifyToken, writeLimiter, groupController.remove);
-
-// Add / Remove student
-router.post("/:id/add-student", writeLimiter, groupController.addStudent);
-router.post(
-  "/:id/remove-student",
-  verifyToken,
-  writeLimiter,
-  groupController.removeStudent,
-);
+// Daily Plan (Singleton)
+router.put("/:id/daily-plan", writeLimiter, controller.upsertDailyPlan);
+router.get("/:id/daily-plan", getAllLimiter, controller.getDailyPlan);
+router.delete("/:id/daily-plan", writeLimiter, controller.deleteDailyPlan);
 
 module.exports = router;
