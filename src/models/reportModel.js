@@ -1,30 +1,24 @@
-const { admin } = require("../config/firebase"); // 👈 تأكد من المسار الصحيح
+const { admin } = require("../config/firebase");
 
 class ReportModel {
   constructor({
     id,
     date,
     minutes,
-    sura,
-    startAya,
-    endAya,
-    remaining_pages,
-    performance,
     notes,
+    performance,
+    suraList = [], // 🔹 بدل الحقول المفردة
     teacherId = null,
     report_for_parents = null,
     type_of_session = null,
-    createdAt = null, // 👈 NEW
+    createdAt = null,
   }) {
     this.id = id;
     this.date = date;
     this.minutes = minutes;
-    this.sura = sura;
-    this.startAya = startAya;
-    this.endAya = endAya;
-    this.remaining_pages = remaining_pages;
-    this.performance = performance;
     this.notes = notes;
+    this.performance = performance;
+    this.suraList = suraList; // List of suras
     this.teacherId = teacherId;
     this.report_for_parents = report_for_parents;
     this.type_of_session = type_of_session;
@@ -35,13 +29,14 @@ class ReportModel {
     return {
       date: this.date,
       minutes: this.minutes,
-      sura: this.sura,
-      startAya: this.startAya,
-      endAya: this.endAya,
-      remaining_pages: this.remaining_pages,
-      performance: this.performance,
       notes: this.notes,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(), // 👈 أهم سطر
+      performance: this.performance,
+      suraList: this.suraList.map((sura) => ({
+        name: sura.name, // اسم السورة
+        startAya: sura.startAya, // بداية الآية
+        endAya: sura.endAya, // نهاية الآية
+      })),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
       ...(this.teacherId ? { teacherId: this.teacherId } : {}),
       ...(this.report_for_parents
         ? { report_for_parents: this.report_for_parents }
@@ -61,4 +56,5 @@ class ReportModel {
     });
   }
 }
+
 module.exports = ReportModel;

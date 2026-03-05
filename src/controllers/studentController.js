@@ -77,15 +77,26 @@ exports.getById = async (req, res) => {
 };
 
 // ✅ Add new report to student
+// studentController.js
 exports.addReport = async (req, res) => {
   try {
     const id = req.params.id;
     const report = req.body;
 
-    if (!report.date || !report.sura) {
+    // ✅ بدل الفحص القديم
+    if (
+      !report.date ||
+      !report.suraList ||
+      !Array.isArray(report.suraList) ||
+      report.suraList.length === 0 ||
+      report.suraList.some(
+        (s) => !s.name || s.startAya == null || s.endAya == null,
+      )
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Report must include date, sura, startAya and endAya",
+        message:
+          "Report must include date and at least one sura with startAya and endAya",
       });
     }
 
@@ -101,7 +112,6 @@ exports.addReport = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to add report" });
   }
 };
-
 // ✅ Update student
 exports.update = async (req, res) => {
   try {

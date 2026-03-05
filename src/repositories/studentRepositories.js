@@ -3,7 +3,6 @@ const { db, admin } = require("../config/firebase");
 const StudentModel = require("../models/studentModel");
 const ReportModel = require("../models/reportModel");
 const AssignmentModel = require("../models/assignmentModel");
-
 const studentsCollection = db.collection("students");
 const teachersCollection = db.collection("teachers");
 
