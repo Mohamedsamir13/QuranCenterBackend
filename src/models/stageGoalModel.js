@@ -1,21 +1,19 @@
 // models/stageGoalModel.js
+
 module.exports = {
   toFirestore(data) {
     return {
-      stageStartDate: data.stageStartDate,
-      stageEndDate: data.stageEndDate,
+      stageStartDate: data.stageStartDate || null,
+      stageEndDate: data.stageEndDate || null,
 
-      memorization: {
-        pagesPerCycle: data.memorization.pagesPerCycle,
-        from: data.memorization.from,
-        to: data.memorization.to,
-      },
-
-      revision: {
-        pagesPerCycle: data.revision.pagesPerCycle,
-        from: data.revision.from,
-        to: data.revision.to,
-      },
+      targets: (data.targets || []).map((t) => ({
+        type: t.type, // memorization | revision
+        suraFrom: t.suraFrom,
+        suraTo: t.suraTo,
+        fromPage: t.fromPage,
+        toPage: t.toPage,
+        pagesPerCycle: t.pagesPerCycle,
+      })),
 
       updatedAt: new Date(),
       createdAt: data.createdAt || new Date(),

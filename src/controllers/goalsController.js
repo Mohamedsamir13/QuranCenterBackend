@@ -1,27 +1,59 @@
 const service = require("../services/goalsService");
 
 // Stage Goal (Singleton)
+// Stage Goal
 exports.upsertStageGoal = async (req, res) => {
-  const { id } = req.params;
-  const data = await service.saveStageGoal(id, req.body);
+  try {
+    const { id } = req.params;
 
-  res.json({ success: true, data });
+    const data = await service.saveStageGoal(id, req.body);
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
 
 exports.getStageGoal = async (req, res) => {
-  const { id } = req.params;
-  const data = await service.getStageGoal(id);
+  try {
+    const { id } = req.params;
 
-  res.json({ success: true, data });
+    const data = await service.getStageGoal(id);
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
 
 exports.deleteStageGoal = async (req, res) => {
-  const { id } = req.params;
-  await service.deleteStageGoal(id);
+  try {
+    const { id } = req.params;
 
-  res.json({ success: true });
+    await service.deleteStageGoal(id);
+
+    res.json({
+      success: true,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
-
 // Daily Plan
 exports.upsertDailyPlan = async (req, res) => {
   const { id } = req.params;
