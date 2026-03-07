@@ -169,14 +169,18 @@ exports.addAssignment = async (req, res) => {
     const assignment = req.body;
 
     if (
-      !assignment.sura ||
-      !assignment.startPage ||
-      !assignment.endPage ||
+      !assignment.suraList ||
+      !Array.isArray(assignment.suraList) ||
+      assignment.suraList.length === 0 ||
+      assignment.suraList.some(
+        (s) => !s.name || s.startPage == null || s.endPage == null,
+      ) ||
       !assignment.sessionType
     ) {
       return res.status(400).json({
         success: false,
-        message: "Sura, startPage, endPage and sessionType are required",
+        message:
+          "suraList with name, startPage, endPage and sessionType are required",
       });
     }
 
