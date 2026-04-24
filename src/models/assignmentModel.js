@@ -4,6 +4,7 @@ class AssignmentModel {
   constructor({
     id,
     suraList = [],
+    suraRanges = [],
     sessionType,
     assignedDate,
     dueDate,
@@ -12,6 +13,7 @@ class AssignmentModel {
   }) {
     this.id = id;
     this.suraList = suraList;
+    this.suraRanges = suraRanges;
     this.sessionType = sessionType;
     this.assignedDate = assignedDate;
     this.dueDate = dueDate;
@@ -26,6 +28,7 @@ AssignmentModel.fromFirestore = (doc) => {
   return new AssignmentModel({
     id: doc.id,
     suraList: data.suraList || [],
+    suraRanges: data.suraRanges || [],
     sessionType: data.sessionType,
 
     assignedDate: data.assignedDate?.toDate
@@ -50,6 +53,11 @@ AssignmentModel.prototype.toFirestore = function () {
       name: sura.name,
       startPage: sura.startPage,
       endPage: sura.endPage,
+    })),
+    suraRanges: this.suraRanges.map((range) => ({
+      fromSura: range.fromSura,
+      toSura: range.toSura,
+      type: range.type || "full",
     })),
 
     sessionType: this.sessionType,

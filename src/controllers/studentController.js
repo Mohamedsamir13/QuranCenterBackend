@@ -84,19 +84,29 @@ exports.addReport = async (req, res) => {
     const report = req.body;
 
     // ✅ بدل الفحص القديم
-    if (
-      !report.date ||
-      !report.suraList ||
-      !Array.isArray(report.suraList) ||
-      report.suraList.length === 0 ||
-      report.suraList.some(
-        (s) => !s.name || s.startAya == null || s.endAya == null,
-      )
-    ) {
+    const hasSuraList = Array.isArray(report.suraList) && report.suraList.length > 0;
+    const hasSuraRanges = Array.isArray(report.suraRanges) && report.suraRanges.length > 0;
+
+    if (!report.date || (!hasSuraList && !hasSuraRanges)) {
       return res.status(400).json({
         success: false,
-        message:
-          "Report must include date and at least one sura with startAya and endAya",
+        message: "Report must include date and either a sura list or a sura range",
+      });
+    }
+
+    // Validate suraList if present
+    if (hasSuraList && report.suraList.some((s) => !s.name || s.startAya == null || s.endAya == null)) {
+      return res.status(400).json({
+        success: false,
+        message: "All items in suraList must have name, startAya, and endAya",
+      });
+    }
+
+    // Validate suraRanges if present
+    if (hasSuraRanges && report.suraRanges.some((r) => !r.fromSura || !r.toSura)) {
+      return res.status(400).json({
+        success: false,
+        message: "All items in suraRanges must have fromSura and toSura",
       });
     }
 
@@ -168,19 +178,29 @@ exports.addAssignment = async (req, res) => {
     const studentId = req.params.id;
     const assignment = req.body;
 
-    if (
-      !assignment.suraList ||
-      !Array.isArray(assignment.suraList) ||
-      assignment.suraList.length === 0 ||
-      assignment.suraList.some(
-        (s) => !s.name || s.startPage == null || s.endPage == null,
-      ) ||
-      !assignment.sessionType
-    ) {
+    const hasSuraList = Array.isArray(assignment.suraList) && assignment.suraList.length > 0;
+    const hasSuraRanges = Array.isArray(assignment.suraRanges) && assignment.suraRanges.length > 0;
+
+    if (!assignment.sessionType || (!hasSuraList && !hasSuraRanges)) {
       return res.status(400).json({
         success: false,
-        message:
-          "suraList with name, startPage, endPage and sessionType are required",
+        message: "Assignment must include sessionType and either a sura list or a sura range",
+      });
+    }
+
+    // Validate suraList if present
+    if (hasSuraList && assignment.suraList.some((s) => !s.name || s.startPage == null || s.endPage == null)) {
+      return res.status(400).json({
+        success: false,
+        message: "All items in suraList must have name, startPage, and endPage",
+      });
+    }
+
+    // Validate suraRanges if present
+    if (hasSuraRanges && assignment.suraRanges.some((r) => !r.fromSura || !r.toSura)) {
+      return res.status(400).json({
+        success: false,
+        message: "All items in suraRanges must have fromSura and toSura",
       });
     }
 

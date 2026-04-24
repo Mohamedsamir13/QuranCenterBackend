@@ -8,6 +8,7 @@ class ReportModel {
     notes,
     performance,
     suraList = [], // 🔹 بدل الحقول المفردة
+    suraRanges = [],
     teacherId = null,
     report_for_parents = null,
     type_of_session = null,
@@ -19,6 +20,7 @@ class ReportModel {
     this.notes = notes;
     this.performance = performance;
     this.suraList = suraList; // List of suras
+    this.suraRanges = suraRanges; // Range of suras
     this.teacherId = teacherId;
     this.report_for_parents = report_for_parents;
     this.type_of_session = type_of_session;
@@ -35,6 +37,11 @@ class ReportModel {
         name: sura.name, // اسم السورة
         startAya: sura.startAya, // بداية الآية
         endAya: sura.endAya, // نهاية الآية
+      })),
+      suraRanges: this.suraRanges.map((range) => ({
+        fromSura: range.fromSura,
+        toSura: range.toSura,
+        type: range.type || "full",
       })),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       ...(this.teacherId ? { teacherId: this.teacherId } : {}),
