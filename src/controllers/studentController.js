@@ -122,7 +122,7 @@ exports.addReport = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to add report" });
   }
 };
-// ✅ Update student
+
 exports.update = async (req, res) => {
   try {
     const id = req.params.id;
