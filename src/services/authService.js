@@ -9,7 +9,7 @@ const jwt = require("jsonwebtoken");
  * 🔹 Register a user with Firebase Admin SDK & Firestore
  */
 
-const register = async ({ name, email, password, type }) => {
+const register = async ({ name, email, password, type, age, group, teacherId, riwaya }) => {
   // if (type === "Manager") {
   //   throw new Error("Registering as Manager is not allowed");
   // }
@@ -53,10 +53,10 @@ const register = async ({ name, email, password, type }) => {
     await db.collection("students").doc(userRecord.uid).set({
       id: userRecord.uid,
       name: name,
-      age: 0,
-      group: "",
-      teacherId: null,
-      riwaya: "",
+      age: age !== undefined ? Number(age) : 0,
+      group: group || "",
+      teacherId: teacherId || null,
+      riwaya: riwaya || "",
     });
     console.log(`👤 Student profile created for: ${email}`);
   } else if (type === "Teacher") {

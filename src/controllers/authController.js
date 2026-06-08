@@ -6,14 +6,23 @@ const authService = require("../services/authService");
  */
 const register = async (req, res) => {
   try {
-    const { name, email, password, type } = req.body;
+    const { name, email, password, type, age, group, teacherId, riwaya } = req.body;
 
     // Validate required fields
     if (!name || !email || !password || !type) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const user = await authService.register({ name, email, password, type });
+    const user = await authService.register({
+      name,
+      email,
+      password,
+      type,
+      age,
+      group,
+      teacherId,
+      riwaya,
+    });
 
     res.status(201).json({
       message: "User registered successfully",
