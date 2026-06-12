@@ -11,12 +11,28 @@ exports.getAllTeachers = async () => {
     const snapshot = await teachersCollection.get();
     console.log("📄 Snapshot size:", snapshot.size);
 
-    // Debug each doc
-    snapshot.forEach((doc) => {
-      console.log("👤 Teacher doc found:", doc.id, doc.data());
+    const teachers = snapshot.docs.map(TeacherModel.fromFirestore);
+
+    // Fetch all student documents to count and associate them
+    const studentsSnapshot = await db.collection("students").get();
+    const studentsTeacherMap = {};
+    studentsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      const teacherId = data.teacherId;
+      if (teacherId) {
+        if (!studentsTeacherMap[teacherId]) {
+          studentsTeacherMap[teacherId] = [];
+        }
+        studentsTeacherMap[teacherId].push(doc.id);
+      }
     });
 
-    return snapshot.docs.map(TeacherModel.fromFirestore);
+    return teachers.map((t) => {
+      const computedIds = studentsTeacherMap[t.id] || [];
+      const mergedIds = Array.from(new Set([...(t.students || []), ...computedIds]));
+      t.students = mergedIds;
+      return t;
+    });
   } catch (error) {
     console.error(
       "🔥 Firestore error in getAllTeachers:",
@@ -31,7 +47,17 @@ exports.getAllTeachers = async () => {
 exports.getTeacherById = async (id) => {
   const doc = await teachersCollection.doc(id).get();
   if (!doc.exists) return null;
-  return TeacherModel.fromFirestore(doc);
+  const teacher = TeacherModel.fromFirestore(doc);
+
+  const studentsSnapshot = await db.collection("students").where("teacherId", "==", id).get();
+  const computedIds = [];
+  studentsSnapshot.forEach((doc) => {
+    computedIds.push(doc.id);
+  });
+
+  const mergedIds = Array.from(new Set([...(teacher.students || []), ...computedIds]));
+  teacher.students = mergedIds;
+  return teacher;
 };
 
 exports.addTeacher = async (teacherData) => {

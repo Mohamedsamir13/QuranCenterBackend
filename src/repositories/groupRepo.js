@@ -7,14 +7,45 @@ const groupsCollection = db.collection("groups");
 // ✅ Get all groups
 exports.getAllGroups = async () => {
   const snapshot = await groupsCollection.get();
-  return snapshot.docs.map(GroupModel.fromFirestore);
+  const groups = snapshot.docs.map(GroupModel.fromFirestore);
+
+  // Fetch all student documents to count and associate them
+  const studentsSnapshot = await db.collection("students").get();
+  const studentsGroupMap = {};
+  studentsSnapshot.forEach((doc) => {
+    const data = doc.data();
+    const groupId = data.group;
+    if (groupId) {
+      if (!studentsGroupMap[groupId]) {
+        studentsGroupMap[groupId] = [];
+      }
+      studentsGroupMap[groupId].push(doc.id);
+    }
+  });
+
+  return groups.map((g) => {
+    const computedIds = studentsGroupMap[g.id] || [];
+    const mergedIds = Array.from(new Set([...(g.students || []), ...computedIds]));
+    g.students = mergedIds;
+    return g;
+  });
 };
 
 // ✅ Get group by ID
 exports.getGroupById = async (id) => {
   const doc = await groupsCollection.doc(id).get();
   if (!doc.exists) return null;
-  return GroupModel.fromFirestore(doc);
+  const group = GroupModel.fromFirestore(doc);
+
+  const studentsSnapshot = await db.collection("students").where("group", "==", id).get();
+  const computedIds = [];
+  studentsSnapshot.forEach((doc) => {
+    computedIds.push(doc.id);
+  });
+
+  const mergedIds = Array.from(new Set([...(group.students || []), ...computedIds]));
+  group.students = mergedIds;
+  return group;
 };
 
 // ✅ Create group
