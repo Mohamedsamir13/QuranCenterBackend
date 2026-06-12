@@ -31,15 +31,46 @@ exports.getStudentById = async (id) => {
 
 // ✅ Create student
 exports.addStudent = async (data) => {
+  let targetId = data.id;
+
+  if (!targetId) {
+    // Fallback: check if there is an auth user with the same name and type 'Student'
+    const usersSnap = await db.collection("users")
+      .where("name", "==", data.name)
+      .where("type", "==", "Student")
+      .limit(1)
+      .get();
+
+    if (!usersSnap.empty) {
+      targetId = usersSnap.docs[0].id;
+      console.log(`ℹ️ Fallback: Found matching auth user UID: ${targetId} for student: ${data.name}`);
+    }
+  }
+
   const student = new StudentModel(data);
-  const docRef = await studentsCollection.add(student.toFirestore());
-  await docRef.update({ id: docRef.id });
+  let docRef;
+  if (targetId) {
+    docRef = studentsCollection.doc(targetId);
+    await docRef.set(student.toFirestore());
+    await docRef.update({ id: targetId });
+  } else {
+    docRef = await studentsCollection.add(student.toFirestore());
+    await docRef.update({ id: docRef.id });
+  }
 
   // Assign to teacher if needed
   if (data.teacherId) {
     await teachersCollection.doc(data.teacherId).update({
       students: admin.firestore.FieldValue.arrayUnion(docRef.id),
     });
+  }
+
+  // Automatically add student to group in groups collection
+  if (data.group) {
+    await db.collection("groups").doc(data.group).update({
+      students: admin.firestore.FieldValue.arrayUnion(docRef.id),
+    });
+    console.log(`✅ Student ${docRef.id} added to group ${data.group} in groups collection.`);
   }
 
   return { ...data, id: docRef.id };

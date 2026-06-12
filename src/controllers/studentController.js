@@ -22,7 +22,7 @@ exports.getAll = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     console.log("📥 Incoming Student Payload:", req.body);
-    const { name, age, group, teacherId, riwaya, goal } = req.body;
+    const { id, name, age, group, teacherId, riwaya, goal } = req.body;
 
     if (!name || !group) {
       return res.status(400).json({
@@ -32,6 +32,7 @@ exports.create = async (req, res) => {
     }
 
     const newStudent = await studentService.createStudent({
+      id: id || null,
       name,
       age,
       group,
