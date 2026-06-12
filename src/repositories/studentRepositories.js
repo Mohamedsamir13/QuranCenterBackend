@@ -6,10 +6,22 @@ const AssignmentModel = require("../models/assignmentModel");
 const studentsCollection = db.collection("students");
 const teachersCollection = db.collection("teachers");
 
-// ✅ Get all students
-exports.getAllStudents = async () => {
+// ✅ Get all students (with optional pagination support)
+exports.getAllStudents = async (page, limit) => {
   const snapshot = await studentsCollection.get();
-  return snapshot.docs.map((doc) => StudentModel.fromFirestore(doc));
+  const allStudents = snapshot.docs.map((doc) => StudentModel.fromFirestore(doc));
+
+  if (page && limit) {
+    const offset = (page - 1) * limit;
+    const paginated = allStudents.slice(offset, offset + limit);
+    return {
+      students: paginated,
+      total: allStudents.length,
+      hasMore: allStudents.length > (offset + limit),
+    };
+  }
+
+  return allStudents;
 };
 
 // ✅ Get student by ID (with reports)

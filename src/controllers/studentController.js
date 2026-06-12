@@ -1,14 +1,28 @@
 // ...existing code...
 const studentService = require("../services/studentServices");
 
-// ✅ Get all students
+// ✅ Get all students (supporting optional pagination)
 exports.getAll = async (req, res) => {
   try {
-    const students = await studentService.getStudents();
+    const page = req.query.page ? parseInt(req.query.page) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit) : null;
+
+    const result = await studentService.getStudents(page, limit);
+
+    if (page && limit) {
+      return res.status(200).json({
+        success: true,
+        count: result.students.length,
+        total: result.total,
+        hasMore: result.hasMore,
+        data: result.students,
+      });
+    }
+
     res.status(200).json({
       success: true,
-      count: students.length,
-      data: students,
+      count: result.length,
+      data: result,
     });
   } catch (error) {
     console.error("❌ Error fetching students:", error);

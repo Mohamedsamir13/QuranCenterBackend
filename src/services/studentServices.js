@@ -1,7 +1,7 @@
 // services/studentServices.js
 const studentRepo = require("../repositories/studentRepositories");
 
-exports.getStudents = async () => studentRepo.getAllStudents();
+exports.getStudents = async (page, limit) => studentRepo.getAllStudents(page, limit);
 exports.getStudent = async (id) => studentRepo.getStudentById(id);
 exports.createStudent = async (data) => studentRepo.addStudent(data);
 exports.addReport = async (id, report) =>
