@@ -110,16 +110,109 @@ exports.addReport = async (req, res) => {
       });
     }
 
-    await studentService.addReport(id, report);
+    const savedReport = await studentService.addReport(id, report);
 
     res.status(200).json({
       success: true,
       message: "Report added successfully",
-      data: report,
+      data: savedReport,
     });
   } catch (error) {
     console.error("❌ Error adding report:", error);
     res.status(500).json({ success: false, message: "Failed to add report" });
+  }
+};
+
+// ✅ Get all reports for student
+exports.getReports = async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const reports = await studentService.getReports(studentId);
+    res.status(200).json({ success: true, data: reports });
+  } catch (error) {
+    console.error("❌ Error fetching reports:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch reports" });
+  }
+};
+
+// ✅ Get report by ID
+exports.getReportById = async (req, res) => {
+  try {
+    const { id: studentId, reportId } = req.params;
+    const report = await studentService.getReportById(studentId, reportId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+    res.status(200).json({ success: true, data: report });
+  } catch (error) {
+    console.error("❌ Error fetching report by ID:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch report" });
+  }
+};
+
+// ✅ Update report
+exports.updateReport = async (req, res) => {
+  try {
+    const { id: studentId, reportId } = req.params;
+    const data = req.body;
+
+    // Validation for update data fields if they are supplied
+    if (data.suraList !== undefined) {
+      if (!Array.isArray(data.suraList)) {
+        return res.status(400).json({ success: false, message: "suraList must be an array" });
+      }
+      if (data.suraList.some((s) => !s.name || s.startAya == null || s.endAya == null)) {
+        return res.status(400).json({
+          success: false,
+          message: "All items in suraList must have name, startAya, and endAya",
+        });
+      }
+    }
+
+    if (data.suraRanges !== undefined) {
+      if (!Array.isArray(data.suraRanges)) {
+        return res.status(400).json({ success: false, message: "suraRanges must be an array" });
+      }
+      if (data.suraRanges.some((r) => !r.fromSura || !r.toSura)) {
+        return res.status(400).json({
+          success: false,
+          message: "All items in suraRanges must have fromSura and toSura",
+        });
+      }
+    }
+
+    const updated = await studentService.updateReport(studentId, reportId, data);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Report updated successfully",
+      data: updated,
+    });
+  } catch (error) {
+    console.error("❌ Error updating report:", error);
+    res.status(500).json({ success: false, message: "Failed to update report" });
+  }
+};
+
+// ✅ Delete report
+exports.deleteReport = async (req, res) => {
+  try {
+    const { id: studentId, reportId } = req.params;
+    const deleted = await studentService.deleteReport(studentId, reportId);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Report deleted successfully",
+    });
+  } catch (error) {
+    console.error("❌ Error deleting report:", error);
+    res.status(500).json({ success: false, message: "Failed to delete report" });
   }
 };
 

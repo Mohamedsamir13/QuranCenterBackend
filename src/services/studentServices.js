@@ -9,6 +9,19 @@ exports.addReport = async (id, report) =>
 
 exports.updateStudent = async (id, data) => studentRepo.updateStudent(id, data);
 exports.deleteStudent = async (id) => studentRepo.deleteStudent(id);
+
+// Report Services
+exports.getReports = async (studentId) =>
+  studentRepo.getReportsForStudent(studentId);
+
+exports.getReportById = async (studentId, reportId) =>
+  studentRepo.getReportById(studentId, reportId);
+
+exports.updateReport = async (studentId, reportId, data) =>
+  studentRepo.updateReport(studentId, reportId, data);
+
+exports.deleteReport = async (studentId, reportId) =>
+  studentRepo.deleteReport(studentId, reportId);
 ///Assignment Services
 exports.addAssignment = async (studentId, assignment) =>
   studentRepo.addAssignmentToStudent(studentId, assignment);

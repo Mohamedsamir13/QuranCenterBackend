@@ -9,6 +9,10 @@ router.put("/update-student/:id", writeLimiter, studentController.update);
 router.delete("/delete-student/:id", writeLimiter, studentController.remove);
 // Reports
 router.post("/:id/reports", writeLimiter, studentController.addReport);
+router.get("/:id/reports", getAllLimiter, studentController.getReports);
+router.get("/:id/reports/:reportId", getAllLimiter, studentController.getReportById);
+router.put("/:id/reports/:reportId", writeLimiter, studentController.updateReport);
+router.delete("/:id/reports/:reportId", writeLimiter, studentController.deleteReport);
 // Assignments
 router.post("/:id/assignments", writeLimiter, studentController.addAssignment);
 router.get("/:id/assignments", getAllLimiter, studentController.getAssignments);

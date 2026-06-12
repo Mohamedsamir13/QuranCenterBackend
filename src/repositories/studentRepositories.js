@@ -94,6 +94,54 @@ exports.addReportToStudent = async (studentId, reportData) => {
   return { ...reportData, id: reportRef.id };
 };
 
+// ✅ Get reports for student
+exports.getReportsForStudent = async (studentId) => {
+  const snap = await studentsCollection
+    .doc(studentId)
+    .collection("reports")
+    .orderBy("createdAt", "desc")
+    .get();
+  return snap.docs.map(ReportModel.fromFirestore);
+};
+
+// ✅ Get report by ID
+exports.getReportById = async (studentId, reportId) => {
+  const doc = await studentsCollection
+    .doc(studentId)
+    .collection("reports")
+    .doc(reportId)
+    .get();
+  if (!doc.exists) return null;
+  return ReportModel.fromFirestore(doc);
+};
+
+// ✅ Update report
+exports.updateReport = async (studentId, reportId, data) => {
+  const ref = studentsCollection
+    .doc(studentId)
+    .collection("reports")
+    .doc(reportId);
+  const doc = await ref.get();
+  if (!doc.exists) return null;
+
+  await ref.update(data);
+  return { id: reportId, ...data };
+};
+
+// ✅ Delete report
+exports.deleteReport = async (studentId, reportId) => {
+  const ref = studentsCollection
+    .doc(studentId)
+    .collection("reports")
+    .doc(reportId);
+  const doc = await ref.get();
+  if (!doc.exists) return false;
+
+  await ref.delete();
+  return true;
+};
+
+
 // Add Assignment
 exports.addAssignmentToStudent = async (studentId, assignmentData) => {
   const assignment = new AssignmentModel(assignmentData);
