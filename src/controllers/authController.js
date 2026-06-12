@@ -1,5 +1,6 @@
 // src/controllers/authController.js
 const authService = require("../services/authService");
+const jwt = require("jsonwebtoken");
 
 /**
  * 🧱 Register Controller (uses Firebase Auth)
@@ -24,8 +25,20 @@ const register = async (req, res) => {
       riwaya,
     });
 
+    const jwtSecret = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        type: user.type,
+      },
+      jwtSecret,
+      { expiresIn: "7d" }
+    );
+
     res.status(201).json({
       message: "User registered successfully",
+      token,
       user,
     });
   } catch (error) {
