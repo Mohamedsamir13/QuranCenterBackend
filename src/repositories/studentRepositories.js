@@ -83,7 +83,38 @@ exports.updateStudent = async (id, data) => {
 
   if (!doc.exists) return null;
 
+  const oldData = doc.data();
+
   await docRef.update(data);
+
+  // Sync teacher students array
+  if (data.teacherId !== undefined && data.teacherId !== oldData.teacherId) {
+    if (oldData.teacherId) {
+      await teachersCollection.doc(oldData.teacherId).update({
+        students: admin.firestore.FieldValue.arrayRemove(id),
+      }).catch(() => {});
+    }
+    if (data.teacherId) {
+      await teachersCollection.doc(data.teacherId).update({
+        students: admin.firestore.FieldValue.arrayUnion(id),
+      }).catch(() => {});
+    }
+  }
+
+  // Sync group students array
+  if (data.group !== undefined && data.group !== oldData.group) {
+    if (oldData.group) {
+      await db.collection("groups").doc(oldData.group).update({
+        students: admin.firestore.FieldValue.arrayRemove(id),
+      }).catch(() => {});
+    }
+    if (data.group) {
+      await db.collection("groups").doc(data.group).update({
+        students: admin.firestore.FieldValue.arrayUnion(id),
+      }).catch(() => {});
+    }
+  }
+
   return { id, ...data };
 };
 
