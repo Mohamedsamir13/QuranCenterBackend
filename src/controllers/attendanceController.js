@@ -3,11 +3,11 @@ const attendanceRepo = require("../repositories/attendanceRepository");
 
 exports.getOrCreateSession = async (req, res) => {
   try {
-    const { groupId, date, startTime, endTime, teacherId } = req.body;
+    const { groupId, date, startTime, endTime, teacherId, studentIds } = req.body;
     if (!groupId || !date) {
       return res.status(400).json({ status: "error", message: "groupId and date are required" });
     }
-    const session = await attendanceRepo.getOrCreateSession({ groupId, date, startTime, endTime, teacherId });
+    const session = await attendanceRepo.getOrCreateSession({ groupId, date, startTime, endTime, teacherId, studentIds: studentIds || [] });
     res.json({ status: "success", data: session });
   } catch (e) {
     res.status(500).json({ status: "error", message: e.message });

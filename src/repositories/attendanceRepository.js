@@ -15,12 +15,17 @@ const groupsCollection = db.collection("groups");
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 // 🎯 Get or Create Group Session
-exports.getOrCreateSession = async ({ groupId, date, startTime = "10:00", endTime = "11:00", teacherId = null }) => {
+exports.getOrCreateSession = async ({ groupId, date, startTime = "10:00", endTime = "11:00", teacherId = null, studentIds = [] }) => {
   let query = sessionsCollection.where("groupId", "==", groupId).where("date", "==", date);
   const snap = await query.get();
 
   if (!snap.empty) {
-    return GroupSessionModel.fromFirestore(snap.docs[0]);
+    // ✅ If session exists but has no storedStudentIds, update it now
+    const existingSession = GroupSessionModel.fromFirestore(snap.docs[0]);
+    if (studentIds.length > 0 && (!snap.docs[0].data().storedStudentIds || snap.docs[0].data().storedStudentIds.length === 0)) {
+      await sessionsCollection.doc(existingSession.id).update({ storedStudentIds: studentIds });
+    }
+    return existingSession;
   }
 
   // Get teacherId from group if not provided
@@ -42,7 +47,13 @@ exports.getOrCreateSession = async ({ groupId, date, startTime = "10:00", endTim
     status: "ATTENDANCE_OPEN",
   });
 
-  await ref.set(session.toFirestore());
+  const sessionData = session.toFirestore();
+  // ✅ Store student IDs snapshot at session creation time
+  if (studentIds.length > 0) {
+    sessionData.storedStudentIds = studentIds;
+  }
+
+  await ref.set(sessionData);
   return session;
 };
 
@@ -77,12 +88,18 @@ exports.getSessionAttendanceDetails = async (sessionId) => {
   const dateObj = new Date(session.date);
   const dayOfWeek = DAY_NAMES[dateObj.getDay()];
 
-  // ✅ STEP 1: Get all students directly from the group document
-  const groupDoc = await groupsCollection.doc(session.groupId).get();
-  const groupData = groupDoc.exists ? groupDoc.data() : {};
-  const groupStudentIds = groupData.students || [];
+  // ✅ STEP 1: Get student IDs — prefer storedStudentIds (passed by Flutter), fallback to group doc
+  const sessionRaw = sessionDoc.data();
+  let groupStudentIds = sessionRaw.storedStudentIds || [];
 
-  // ✅ STEP 2: Fetch all student documents in parallel
+  if (groupStudentIds.length === 0) {
+    // Fallback: fetch from group document
+    const groupDoc = await groupsCollection.doc(session.groupId).get();
+    const groupData = groupDoc.exists ? groupDoc.data() : {};
+    groupStudentIds = groupData.students || [];
+  }
+
+  // ✅ STEP 2: Fetch all student documents in parallel (skip missing ones gracefully)
   const studentDocs = await Promise.all(
     groupStudentIds.map((id) => studentsCollection.doc(id).get())
   );
