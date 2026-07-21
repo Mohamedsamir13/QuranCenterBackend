@@ -116,9 +116,12 @@ exports.getSessionAttendanceDetails = async (sessionId) => {
 
   // ✅ STEP 4: Merge — for each group student, get their record (or default to NOT_RECORDED)
   const studentAttendanceList = [];
-  const groupStudentIds_set = new Set(groupStudentIds);
+  const seenStudentIds = new Set();
 
   for (const s of groupStudents) {
+    if (seenStudentIds.has(s.id)) continue;
+    seenStudentIds.add(s.id);
+
     const record = recordsMap.get(s.id);
     studentAttendanceList.push({
       studentId: s.id,
@@ -136,7 +139,8 @@ exports.getSessionAttendanceDetails = async (sessionId) => {
 
   // ✅ STEP 5: Include truly extra students (added manually, NOT in group roster)
   for (const r of existingRecords) {
-    if (!groupStudentIds_set.has(r.studentId)) {
+    if (!seenStudentIds.has(r.studentId)) {
+      seenStudentIds.add(r.studentId);
       const sDoc = await studentsCollection.doc(r.studentId).get();
       const sName = sDoc.exists ? sDoc.data().name : "Extra Student";
       studentAttendanceList.push({
@@ -269,6 +273,17 @@ exports.addExtraStudent = async (sessionId, studentId, status = "PRESENT", marke
   const sessionDoc = await sessionsCollection.doc(sessionId).get();
   if (!sessionDoc.exists) throw new Error("Session not found");
   const session = GroupSessionModel.fromFirestore(sessionDoc);
+
+  // Check if student already has attendance in this session
+  const existingSnap = await attendanceCollection
+    .where("sessionId", "==", sessionId)
+    .where("studentId", "==", studentId)
+    .limit(1)
+    .get();
+
+  if (!existingSnap.empty) {
+    return AttendanceRecordModel.fromFirestore(existingSnap.docs[0]);
+  }
 
   const docRef = attendanceCollection.doc();
   const model = new AttendanceRecordModel({
