@@ -405,12 +405,12 @@ exports.getAcademyAttendanceAnalytics = async (dateRange = "this_month") => {
   const overallRate = totalExpected > 0 ? Math.min(100.0, ((present + late) / Math.max(totalExpected, present + late + absent + excused)) * 100) : 100.0;
   const overallPunctuality = present + late > 0 ? Math.min(100.0, (present / (present + late)) * 100) : 100.0;
 
-  // Identify At-Risk Students (< 75% attendance or 3+ absences)
+  // Identify At-Risk Students (Strictly 3+ absences)
   const atRiskStudents = [];
   for (const [studentId, stat] of studentStatsMap.entries()) {
     const totalSess = Math.max(stat.expected, stat.present + stat.late + stat.absent + stat.excused);
     const rate = totalSess > 0 ? Math.min(100.0, ((stat.present + stat.late) / totalSess) * 100) : 100;
-    if (rate < 75 || stat.absent >= 3) {
+    if (stat.absent >= 3) {
       const sDoc = await studentsCollection.doc(studentId).get();
       const sData = sDoc.exists ? sDoc.data() : {};
       atRiskStudents.push({
@@ -420,7 +420,7 @@ exports.getAcademyAttendanceAnalytics = async (dateRange = "this_month") => {
         attendanceRate: Number(rate.toFixed(1)),
         absentCount: stat.absent,
         lateCount: stat.late,
-        riskLevel: rate < 60 || stat.absent >= 5 ? "HIGH" : "MEDIUM",
+        riskLevel: stat.absent >= 5 || rate < 50 ? "HIGH" : "MEDIUM",
       });
     }
   }
