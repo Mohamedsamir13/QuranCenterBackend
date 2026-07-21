@@ -96,3 +96,32 @@ exports.getAuditLogs = async (req, res) => {
     res.status(500).json({ status: "error", message: e.message });
   }
 };
+
+exports.getTodayAbsences = async (req, res) => {
+  try {
+    const absences = await attendanceRepo.getTodayAbsences();
+    res.json({ status: "success", data: absences });
+  } catch (e) {
+    res.status(500).json({ status: "error", message: e.message });
+  }
+};
+
+exports.getTodayStats = async (req, res) => {
+  try {
+    const stats = await attendanceRepo.getTodayStats();
+    res.json({ status: "success", data: stats });
+  } catch (e) {
+    res.status(500).json({ status: "error", message: e.message });
+  }
+};
+
+exports.getGroupAttendanceStats = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const stats = await attendanceRepo.getGroupAttendanceStats(groupId);
+    res.json({ status: "success", data: stats });
+  } catch (e) {
+    res.status(500).json({ status: "error", message: e.message });
+  }
+};
+

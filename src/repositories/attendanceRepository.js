@@ -397,3 +397,170 @@ exports.getAuditLogs = async (sessionId = null, studentId = null) => {
   const snap = await query.get();
   return snap.docs.map((doc) => AttendanceAuditModel.fromFirestore(doc));
 };
+
+// 🎯 Get Today's Absences (Manager Dashboard - Fast)
+exports.getTodayAbsences = async () => {
+  const today = new Date().toISOString().split("T")[0];
+
+  // Get all sessions today
+  const sessionsSnap = await sessionsCollection.where("date", "==", today).get();
+  if (sessionsSnap.empty) return [];
+
+  const absences = [];
+
+  for (const sessionDoc of sessionsSnap.docs) {
+    const session = GroupSessionModel.fromFirestore(sessionDoc);
+
+    // Get group info
+    const groupDoc = await groupsCollection.doc(session.groupId).get();
+    const groupData = groupDoc.exists ? groupDoc.data() : {};
+    const groupName = groupData.name || "Unknown Group";
+
+    // Get attendance records for this session
+    const attSnap = await attendanceCollection
+      .where("sessionId", "==", session.id)
+      .where("status", "==", "ABSENT")
+      .get();
+
+    for (const attDoc of attSnap.docs) {
+      const att = AttendanceRecordModel.fromFirestore(attDoc);
+      if (att.eligibilityType !== "EXPECTED") continue;
+
+      // Fetch student info
+      const sDoc = await studentsCollection.doc(att.studentId).get();
+      const sData = sDoc.exists ? sDoc.data() : {};
+
+      // Get student's full history stats
+      const historySnap = await attendanceCollection
+        .where("studentId", "==", att.studentId)
+        .where("eligibilityType", "==", "EXPECTED")
+        .get();
+
+      let totalPresent = 0, totalLate = 0, totalAbsent = 0, totalExcused = 0;
+      historySnap.docs.forEach((d) => {
+        const r = d.data();
+        if (r.status === "PRESENT") totalPresent++;
+        else if (r.status === "LATE") totalLate++;
+        else if (r.status === "ABSENT") totalAbsent++;
+        else if (r.status === "EXCUSED") totalExcused++;
+      });
+      const totalExpected = totalPresent + totalLate + totalAbsent + totalExcused;
+      const attendanceRate = totalExpected > 0 ? ((totalPresent + totalLate) / totalExpected) * 100 : 100;
+
+      absences.push({
+        studentId: att.studentId,
+        studentName: sData.name || "Unknown",
+        riwaya: sData.reports?.[0]?.riwaya || sData.riwaya || "N/A",
+        level: sData.level || "N/A",
+        groupId: session.groupId,
+        groupName,
+        sessionDate: today,
+        absenceReason: att.absenceReason || "",
+        totalPresent,
+        totalLate,
+        totalAbsent,
+        totalExcused,
+        totalSessions: totalExpected,
+        attendanceRate: Number(attendanceRate.toFixed(1)),
+      });
+    }
+  }
+
+  return absences;
+};
+
+// 🎯 Get Today's KPI Stats (fast summary)
+exports.getTodayStats = async () => {
+  const today = new Date().toISOString().split("T")[0];
+  const sessionsSnap = await sessionsCollection.where("date", "==", today).get();
+
+  if (sessionsSnap.empty) {
+    return { totalSessions: 0, totalExpected: 0, present: 0, late: 0, absent: 0, excused: 0, notRecorded: 0 };
+  }
+
+  const sessionIds = sessionsSnap.docs.map((d) => d.id);
+  let present = 0, late = 0, absent = 0, excused = 0, notRecorded = 0, totalExpected = 0;
+
+  // Firestore 'in' query supports max 30 items at a time
+  const chunks = [];
+  for (let i = 0; i < sessionIds.length; i += 30) {
+    chunks.push(sessionIds.slice(i, i + 30));
+  }
+
+  for (const chunk of chunks) {
+    const attSnap = await attendanceCollection.where("sessionId", "in", chunk).get();
+    attSnap.docs.forEach((doc) => {
+      const r = doc.data();
+      if (r.eligibilityType !== "EXPECTED") return;
+      totalExpected++;
+      if (r.status === "PRESENT") present++;
+      else if (r.status === "LATE") late++;
+      else if (r.status === "ABSENT") absent++;
+      else if (r.status === "EXCUSED") excused++;
+      else notRecorded++;
+    });
+  }
+
+  return {
+    totalSessions: sessionsSnap.size,
+    totalExpected,
+    present,
+    late,
+    absent,
+    excused,
+    notRecorded,
+  };
+};
+
+// 🎯 Get Group Attendance Stats (per group breakdown)
+exports.getGroupAttendanceStats = async (groupId) => {
+  const sessionsSnap = await sessionsCollection.where("groupId", "==", groupId).get();
+  if (sessionsSnap.empty) return { groupId, totalSessions: 0, studentStats: [] };
+
+  const sessionIds = sessionsSnap.docs.map((d) => d.id);
+  const studentStatsMap = new Map();
+
+  const chunks = [];
+  for (let i = 0; i < sessionIds.length; i += 30) {
+    chunks.push(sessionIds.slice(i, i + 30));
+  }
+
+  for (const chunk of chunks) {
+    const attSnap = await attendanceCollection.where("sessionId", "in", chunk).get();
+    attSnap.docs.forEach((doc) => {
+      const r = doc.data();
+      if (!studentStatsMap.has(r.studentId)) {
+        studentStatsMap.set(r.studentId, { present: 0, late: 0, absent: 0, excused: 0, expected: 0 });
+      }
+      const stat = studentStatsMap.get(r.studentId);
+      if (r.eligibilityType === "EXPECTED") stat.expected++;
+      if (r.status === "PRESENT") stat.present++;
+      else if (r.status === "LATE") stat.late++;
+      else if (r.status === "ABSENT") stat.absent++;
+      else if (r.status === "EXCUSED") stat.excused++;
+    });
+  }
+
+  const studentStats = [];
+  for (const [studentId, stat] of studentStatsMap.entries()) {
+    const sDoc = await studentsCollection.doc(studentId).get();
+    const sData = sDoc.exists ? sDoc.data() : {};
+    const rate = stat.expected > 0 ? ((stat.present + stat.late) / stat.expected) * 100 : 100;
+    studentStats.push({
+      studentId,
+      studentName: sData.name || "Unknown",
+      riwaya: sData.reports?.[0]?.riwaya || sData.riwaya || "N/A",
+      ...stat,
+      attendanceRate: Number(rate.toFixed(1)),
+    });
+  }
+
+  studentStats.sort((a, b) => a.attendanceRate - b.attendanceRate);
+
+  return {
+    groupId,
+    totalSessions: sessionsSnap.size,
+    studentStats,
+  };
+};
+

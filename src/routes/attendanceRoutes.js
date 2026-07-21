@@ -18,6 +18,9 @@ router.get("/students/:studentId/attendance", getAllLimiter, attendanceControlle
 
 // Analytics & Audit
 router.get("/analytics", getAllLimiter, attendanceController.getAcademyAnalytics);
+router.get("/today/absences", getAllLimiter, attendanceController.getTodayAbsences);
+router.get("/today/stats", getAllLimiter, attendanceController.getTodayStats);
+router.get("/groups/:groupId/stats", getAllLimiter, attendanceController.getGroupAttendanceStats);
 router.get("/audit", getAllLimiter, attendanceController.getAuditLogs);
 
 module.exports = router;
