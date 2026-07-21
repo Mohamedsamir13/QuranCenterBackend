@@ -66,40 +66,47 @@ exports.getTodaySessions = async (teacherId = null, date = null) => {
   return snap.docs.map((doc) => GroupSessionModel.fromFirestore(doc));
 };
 
-// 🎯 Get Attendance for a Session (Computes Expected Students & Returns Records)
+// 🎯 Get Attendance for a Session (Always shows ALL group students)
 exports.getSessionAttendanceDetails = async (sessionId) => {
   const sessionDoc = await sessionsCollection.doc(sessionId).get();
   if (!sessionDoc.exists) return null;
 
   const session = GroupSessionModel.fromFirestore(sessionDoc);
 
-  // Get date day name (e.g. "Tuesday")
+  // Get date day name (e.g. "Monday")
   const dateObj = new Date(session.date);
   const dayOfWeek = DAY_NAMES[dateObj.getDay()];
 
-  // Fetch expected students
-  const expectedStudents = await scheduleRepo.getExpectedStudentsForSession(
-    session.groupId,
-    session.date,
-    dayOfWeek
-  );
+  // ✅ STEP 1: Get all students directly from the group document
+  const groupDoc = await groupsCollection.doc(session.groupId).get();
+  const groupData = groupDoc.exists ? groupDoc.data() : {};
+  const groupStudentIds = groupData.students || [];
 
-  // Fetch existing attendance records
+  // ✅ STEP 2: Fetch all student documents in parallel
+  const studentDocs = await Promise.all(
+    groupStudentIds.map((id) => studentsCollection.doc(id).get())
+  );
+  const groupStudents = studentDocs
+    .filter((d) => d.exists)
+    .map((d) => ({ id: d.id, name: d.data().name || "Student" }));
+
+  // ✅ STEP 3: Fetch existing attendance records for this session
   const attSnap = await attendanceCollection.where("sessionId", "==", sessionId).get();
   const existingRecords = attSnap.docs.map((doc) => AttendanceRecordModel.fromFirestore(doc));
 
   const recordsMap = new Map();
   existingRecords.forEach((r) => recordsMap.set(r.studentId, r));
 
-  // Merge expected students with records
+  // ✅ STEP 4: Merge — for each group student, get their record (or default to NOT_RECORDED)
   const studentAttendanceList = [];
+  const groupStudentIds_set = new Set(groupStudentIds);
 
-  for (const s of expectedStudents) {
+  for (const s of groupStudents) {
     const record = recordsMap.get(s.id);
     studentAttendanceList.push({
       studentId: s.id,
       studentName: s.name,
-      eligibilityType: record ? record.eligibilityType : "EXPECTED",
+      eligibilityType: (record && record.eligibilityType === "EXTRA") ? "EXTRA" : "EXPECTED",
       status: record ? record.status : "NOT_RECORDED",
       attendanceId: record ? record.id : null,
       scheduledStartAt: record ? record.scheduledStartAt : session.startTime,
@@ -110,17 +117,15 @@ exports.getSessionAttendanceDetails = async (sessionId) => {
     });
   }
 
-  // Include extra students who are not in expected list but have a record
-  const expectedSet = new Set(expectedStudents.map((e) => e.id));
+  // ✅ STEP 5: Include truly extra students (added manually, NOT in group roster)
   for (const r of existingRecords) {
-    if (!expectedSet.has(r.studentId)) {
+    if (!groupStudentIds_set.has(r.studentId)) {
       const sDoc = await studentsCollection.doc(r.studentId).get();
       const sName = sDoc.exists ? sDoc.data().name : "Extra Student";
-
       studentAttendanceList.push({
         studentId: r.studentId,
         studentName: sName,
-        eligibilityType: r.eligibilityType,
+        eligibilityType: "EXTRA",
         status: r.status,
         attendanceId: r.id,
         scheduledStartAt: r.scheduledStartAt,
@@ -135,11 +140,12 @@ exports.getSessionAttendanceDetails = async (sessionId) => {
   return {
     session,
     dayOfWeek,
-    totalExpected: expectedStudents.length,
+    totalExpected: groupStudents.length,
     totalRecorded: existingRecords.length,
     attendance: studentAttendanceList,
   };
 };
+
 
 // 🎯 Record / Save Session Attendance in Bulk
 exports.saveSessionAttendance = async (sessionId, recordsList, markedBy = "Teacher") => {
