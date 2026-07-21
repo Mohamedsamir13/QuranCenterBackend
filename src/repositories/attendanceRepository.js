@@ -528,7 +528,7 @@ exports.getTodayStats = async (targetDate = null) => {
   }
 
   const sessionIds = sessionsSnap.docs.map((d) => d.id);
-  let present = 0, late = 0, absent = 0, excused = 0, notRecorded = 0, totalExpected = 0;
+  let present = 0, late = 0, absent = 0, excused = 0, notRecorded = 0, rawExpected = 0;
 
   // Firestore 'in' query supports max 30 items at a time
   const chunks = [];
@@ -540,8 +540,7 @@ exports.getTodayStats = async (targetDate = null) => {
     const attSnap = await attendanceCollection.where("sessionId", "in", chunk).get();
     attSnap.docs.forEach((doc) => {
       const r = doc.data();
-      if (r.eligibilityType !== "EXPECTED") return;
-      totalExpected++;
+      if (r.eligibilityType === "EXPECTED") rawExpected++;
       if (r.status === "PRESENT") present++;
       else if (r.status === "LATE") late++;
       else if (r.status === "ABSENT") absent++;
@@ -549,6 +548,9 @@ exports.getTodayStats = async (targetDate = null) => {
       else notRecorded++;
     });
   }
+
+  const computedTotal = present + late + absent + excused + notRecorded;
+  const totalExpected = Math.max(rawExpected, computedTotal);
 
   return {
     totalSessions: sessionsSnap.size,
