@@ -104,12 +104,9 @@ exports.getExpectedStudentsForSession = async (groupId, date, dayOfWeek) => {
     scheduleSnap.docs.map((doc) => doc.data().studentId)
   );
 
-  // Fallback: If no custom schedules are set for this group yet, default to group day matching
+  // Fallback: If no custom schedules are set for this group yet, default all enrolled group students as expected
   if (scheduledStudentIds.size === 0 && groupStudentIds.length > 0) {
-    // If group.day matches session day, default all group students as scheduled
-    if (groupData.day && groupData.day.toLowerCase() === dayOfWeek.toLowerCase()) {
-      groupStudentIds.forEach((id) => scheduledStudentIds.add(id));
-    }
+    groupStudentIds.forEach((id) => scheduledStudentIds.add(id));
   }
 
   // 3. Fetch schedule exceptions for this group on date
