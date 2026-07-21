@@ -15,15 +15,17 @@ const groupsCollection = db.collection("groups");
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 // 🎯 Get or Create Group Session
-exports.getOrCreateSession = async ({ groupId, date, startTime = "10:00", endTime = "11:00", teacherId = null, studentIds = [] }) => {
+exports.getOrCreateSession = async ({ groupId, date, startTime = "10:00", endTime = "11:00", teacherId = null, studentIds = [], students = [] }) => {
   let query = sessionsCollection.where("groupId", "==", groupId).where("date", "==", date);
   const snap = await query.get();
 
   if (!snap.empty) {
-    // ✅ If session exists but has no storedStudentIds, update it now
     const existingSession = GroupSessionModel.fromFirestore(snap.docs[0]);
-    if (studentIds.length > 0 && (!snap.docs[0].data().storedStudentIds || snap.docs[0].data().storedStudentIds.length === 0)) {
-      await sessionsCollection.doc(existingSession.id).update({ storedStudentIds: studentIds });
+    const updateData = {};
+    if (students.length > 0) updateData.storedStudents = students;
+    if (studentIds.length > 0) updateData.storedStudentIds = studentIds;
+    if (Object.keys(updateData).length > 0) {
+      await sessionsCollection.doc(existingSession.id).update(updateData);
     }
     return existingSession;
   }
@@ -48,10 +50,8 @@ exports.getOrCreateSession = async ({ groupId, date, startTime = "10:00", endTim
   });
 
   const sessionData = session.toFirestore();
-  // ✅ Store student IDs snapshot at session creation time
-  if (studentIds.length > 0) {
-    sessionData.storedStudentIds = studentIds;
-  }
+  if (students.length > 0) sessionData.storedStudents = students;
+  if (studentIds.length > 0) sessionData.storedStudentIds = studentIds;
 
   await ref.set(sessionData);
   return session;
@@ -88,24 +88,32 @@ exports.getSessionAttendanceDetails = async (sessionId) => {
   const dateObj = new Date(session.date);
   const dayOfWeek = DAY_NAMES[dateObj.getDay()];
 
-  // ✅ STEP 1: Get student IDs — prefer storedStudentIds (passed by Flutter), fallback to group doc
+  // ✅ STEP 1: Get student details (storedStudents or storedStudentIds, fallback to group doc)
   const sessionRaw = sessionDoc.data();
+  let storedStudents = sessionRaw.storedStudents || [];
   let groupStudentIds = sessionRaw.storedStudentIds || [];
 
-  if (groupStudentIds.length === 0) {
+  if (storedStudents.length === 0 && groupStudentIds.length === 0) {
     // Fallback: fetch from group document
     const groupDoc = await groupsCollection.doc(session.groupId).get();
     const groupData = groupDoc.exists ? groupDoc.data() : {};
     groupStudentIds = groupData.students || [];
   }
 
-  // ✅ STEP 2: Fetch all student documents in parallel (skip missing ones gracefully)
-  const studentDocs = await Promise.all(
-    groupStudentIds.map((id) => studentsCollection.doc(id).get())
-  );
-  const groupStudents = studentDocs
-    .filter((d) => d.exists)
-    .map((d) => ({ id: d.id, name: d.data().name || "Student" }));
+  // ✅ STEP 2: Resolve group students list
+  let groupStudents = [];
+  if (storedStudents.length > 0) {
+    groupStudents = storedStudents;
+  } else {
+    const studentDocs = await Promise.all(
+      groupStudentIds.map((id) => studentsCollection.doc(id).get())
+    );
+    groupStudents = studentDocs.map((d, index) => {
+      const id = groupStudentIds[index];
+      let name = (d && d.exists && d.data().name) ? d.data().name : id;
+      return { id, name };
+    });
+  }
 
   // ✅ STEP 3: Fetch existing attendance records for this session
   const attSnap = await attendanceCollection.where("sessionId", "==", sessionId).get();
@@ -114,7 +122,7 @@ exports.getSessionAttendanceDetails = async (sessionId) => {
   const recordsMap = new Map();
   existingRecords.forEach((r) => recordsMap.set(r.studentId, r));
 
-  // ✅ STEP 4: Merge — for each group student, get their record (or default to NOT_RECORDED)
+  // ✅ STEP 4: Merge — for each group student, default status to "PRESENT" for open sessions
   const studentAttendanceList = [];
   const seenStudentIds = new Set();
 
@@ -127,7 +135,7 @@ exports.getSessionAttendanceDetails = async (sessionId) => {
       studentId: s.id,
       studentName: s.name,
       eligibilityType: (record && record.eligibilityType === "EXTRA") ? "EXTRA" : "EXPECTED",
-      status: record ? record.status : "NOT_RECORDED",
+      status: record ? record.status : "PRESENT", // ✅ Default to PRESENT as requested
       attendanceId: record ? record.id : null,
       scheduledStartAt: record ? record.scheduledStartAt : session.startTime,
       actualArrivalAt: record ? record.actualArrivalAt : null,
