@@ -8,6 +8,8 @@ const teacherRoutes = require("../src/routes/teacherRoutes");
 const authRoutes = require("../src/routes/authRoutes");
 const groupRoutes = require("../src/routes/groupRoutes");
 const goalsRoutes = require("../src/routes/goalsRoutes");
+const attendanceRoutes = require("../src/routes/attendanceRoutes");
+const scheduleRoutes = require("../src/routes/scheduleRoutes");
 
 const app = express();
 app.use(express.json());
@@ -19,6 +21,8 @@ app.use("/api/students", studentRoutes);
 app.use("/api/teachers", teacherRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/goals", goalsRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/schedules", scheduleRoutes);
 // 🧠 Honeypot trap content (funny fake secrets)
 const funnyTrapText = `
 🤫 Ohhh, so you found secrets.txt huh?

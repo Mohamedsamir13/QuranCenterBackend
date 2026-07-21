@@ -1,0 +1,399 @@
+// repositories/attendanceRepository.js
+const { db } = require("../config/firebase");
+const GroupSessionModel = require("../models/sessionModel");
+const AttendanceRecordModel = require("../models/attendanceModel");
+const AttendanceAuditModel = require("../models/attendanceAuditModel");
+const scheduleRepo = require("./scheduleRepository");
+
+const sessionsCollection = db.collection("group_sessions");
+const attendanceCollection = db.collection("attendance_records");
+const auditCollection = db.collection("attendance_audit_logs");
+const studentsCollection = db.collection("students");
+const groupsCollection = db.collection("groups");
+
+// 🕒 Helper: Helper to convert Day of week index (0-6) to string
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+// 🎯 Get or Create Group Session
+exports.getOrCreateSession = async ({ groupId, date, startTime = "10:00", endTime = "11:00", teacherId = null }) => {
+  let query = sessionsCollection.where("groupId", "==", groupId).where("date", "==", date);
+  const snap = await query.get();
+
+  if (!snap.empty) {
+    return GroupSessionModel.fromFirestore(snap.docs[0]);
+  }
+
+  // Get teacherId from group if not provided
+  if (!teacherId) {
+    const groupDoc = await groupsCollection.doc(groupId).get();
+    if (groupDoc.exists) {
+      teacherId = groupDoc.data().teacherId || null;
+    }
+  }
+
+  const ref = sessionsCollection.doc();
+  const session = new GroupSessionModel({
+    id: ref.id,
+    groupId,
+    date,
+    startTime,
+    endTime,
+    teacherId,
+    status: "ATTENDANCE_OPEN",
+  });
+
+  await ref.set(session.toFirestore());
+  return session;
+};
+
+// 🎯 Update Session Status
+exports.updateSessionStatus = async (sessionId, status) => {
+  await sessionsCollection.doc(sessionId).update({
+    status,
+    updatedAt: new Date().toISOString(),
+  });
+  return true;
+};
+
+// 🎯 Get Today's Sessions for Teacher or All
+exports.getTodaySessions = async (teacherId = null, date = null) => {
+  const targetDate = date || new Date().toISOString().split("T")[0];
+  let query = sessionsCollection.where("date", "==", targetDate);
+  if (teacherId) {
+    query = query.where("teacherId", "==", teacherId);
+  }
+  const snap = await query.get();
+  return snap.docs.map((doc) => GroupSessionModel.fromFirestore(doc));
+};
+
+// 🎯 Get Attendance for a Session (Computes Expected Students & Returns Records)
+exports.getSessionAttendanceDetails = async (sessionId) => {
+  const sessionDoc = await sessionsCollection.doc(sessionId).get();
+  if (!sessionDoc.exists) return null;
+
+  const session = GroupSessionModel.fromFirestore(sessionDoc);
+
+  // Get date day name (e.g. "Tuesday")
+  const dateObj = new Date(session.date);
+  const dayOfWeek = DAY_NAMES[dateObj.getDay()];
+
+  // Fetch expected students
+  const expectedStudents = await scheduleRepo.getExpectedStudentsForSession(
+    session.groupId,
+    session.date,
+    dayOfWeek
+  );
+
+  // Fetch existing attendance records
+  const attSnap = await attendanceCollection.where("sessionId", "==", sessionId).get();
+  const existingRecords = attSnap.docs.map((doc) => AttendanceRecordModel.fromFirestore(doc));
+
+  const recordsMap = new Map();
+  existingRecords.forEach((r) => recordsMap.set(r.studentId, r));
+
+  // Merge expected students with records
+  const studentAttendanceList = [];
+
+  for (const s of expectedStudents) {
+    const record = recordsMap.get(s.id);
+    studentAttendanceList.push({
+      studentId: s.id,
+      studentName: s.name,
+      eligibilityType: record ? record.eligibilityType : "EXPECTED",
+      status: record ? record.status : "NOT_RECORDED",
+      attendanceId: record ? record.id : null,
+      scheduledStartAt: record ? record.scheduledStartAt : session.startTime,
+      actualArrivalAt: record ? record.actualArrivalAt : null,
+      lateMinutes: record ? record.lateMinutes : 0,
+      absenceReason: record ? record.absenceReason : "",
+      notes: record ? record.notes : "",
+    });
+  }
+
+  // Include extra students who are not in expected list but have a record
+  const expectedSet = new Set(expectedStudents.map((e) => e.id));
+  for (const r of existingRecords) {
+    if (!expectedSet.has(r.studentId)) {
+      const sDoc = await studentsCollection.doc(r.studentId).get();
+      const sName = sDoc.exists ? sDoc.data().name : "Extra Student";
+
+      studentAttendanceList.push({
+        studentId: r.studentId,
+        studentName: sName,
+        eligibilityType: r.eligibilityType,
+        status: r.status,
+        attendanceId: r.id,
+        scheduledStartAt: r.scheduledStartAt,
+        actualArrivalAt: r.actualArrivalAt,
+        lateMinutes: r.lateMinutes,
+        absenceReason: r.absenceReason,
+        notes: r.notes,
+      });
+    }
+  }
+
+  return {
+    session,
+    dayOfWeek,
+    totalExpected: expectedStudents.length,
+    totalRecorded: existingRecords.length,
+    attendance: studentAttendanceList,
+  };
+};
+
+// 🎯 Record / Save Session Attendance in Bulk
+exports.saveSessionAttendance = async (sessionId, recordsList, markedBy = "Teacher") => {
+  const sessionDoc = await sessionsCollection.doc(sessionId).get();
+  if (!sessionDoc.exists) throw new Error("Session not found");
+  const session = GroupSessionModel.fromFirestore(sessionDoc);
+
+  const batch = db.batch();
+  const now = new Date().toISOString();
+
+  for (const item of recordsList) {
+    const {
+      studentId,
+      eligibilityType = "EXPECTED",
+      status = "PRESENT",
+      actualArrivalAt = null,
+      absenceReason = "",
+      notes = "",
+    } = item;
+
+    // Calculate late minutes if status is LATE
+    let lateMinutes = 0;
+    if (status === "LATE" && actualArrivalAt && session.startTime) {
+      const [schedH, schedM] = session.startTime.split(":").map(Number);
+      const [actH, actM] = actualArrivalAt.split(":").map(Number);
+      const schedTotal = schedH * 60 + schedM;
+      const actTotal = actH * 60 + actM;
+      if (actTotal > schedTotal) {
+        lateMinutes = actTotal - schedTotal;
+      }
+    }
+
+    // Check if record already exists
+    const existingSnap = await attendanceCollection
+      .where("sessionId", "==", sessionId)
+      .where("studentId", "==", studentId)
+      .limit(1)
+      .get();
+
+    if (!existingSnap.empty) {
+      const docRef = existingSnap.docs[0].ref;
+      const oldModel = AttendanceRecordModel.fromFirestore(existingSnap.docs[0]);
+
+      if (oldModel.status !== status) {
+        // Audit log for change
+        const auditRef = auditCollection.doc();
+        batch.set(
+          auditRef,
+          new AttendanceAuditModel({
+            id: auditRef.id,
+            attendanceId: docRef.id,
+            studentId,
+            sessionId,
+            oldStatus: oldModel.status,
+            newStatus: status,
+            changedBy: markedBy,
+            reason: "Bulk update",
+            changedAt: now,
+          }).toFirestore()
+        );
+      }
+
+      batch.update(docRef, {
+        status,
+        actualArrivalAt,
+        lateMinutes,
+        absenceReason,
+        notes,
+        updatedBy: markedBy,
+        updatedAt: now,
+      });
+    } else {
+      const docRef = attendanceCollection.doc();
+      const model = new AttendanceRecordModel({
+        id: docRef.id,
+        sessionId,
+        studentId,
+        eligibilityType,
+        status,
+        scheduledStartAt: session.startTime,
+        actualArrivalAt,
+        lateMinutes,
+        absenceReason,
+        notes,
+        markedBy,
+        markedAt: now,
+      });
+      batch.set(docRef, model.toFirestore());
+    }
+  }
+
+  // Update session status to COMPLETED
+  batch.update(sessionsCollection.doc(sessionId), {
+    status: "COMPLETED",
+    updatedAt: now,
+  });
+
+  await batch.commit();
+  return true;
+};
+
+// 🎯 Add Extra Student to Session
+exports.addExtraStudent = async (sessionId, studentId, status = "PRESENT", markedBy = "Teacher") => {
+  const sessionDoc = await sessionsCollection.doc(sessionId).get();
+  if (!sessionDoc.exists) throw new Error("Session not found");
+  const session = GroupSessionModel.fromFirestore(sessionDoc);
+
+  const docRef = attendanceCollection.doc();
+  const model = new AttendanceRecordModel({
+    id: docRef.id,
+    sessionId,
+    studentId,
+    eligibilityType: "EXTRA",
+    status,
+    scheduledStartAt: session.startTime,
+    markedBy,
+  });
+
+  await docRef.set(model.toFirestore());
+  return model;
+};
+
+// 🎯 Get Student Attendance Summary & History
+exports.getStudentAttendanceSummary = async (studentId) => {
+  const snap = await attendanceCollection.where("studentId", "==", studentId).get();
+  const records = snap.docs.map((doc) => AttendanceRecordModel.fromFirestore(doc));
+
+  let present = 0;
+  let late = 0;
+  let absent = 0;
+  let excused = 0;
+  let extra = 0;
+
+  const history = [];
+
+  for (const r of records) {
+    if (r.eligibilityType === "EXTRA") extra++;
+
+    if (r.status === "PRESENT") present++;
+    else if (r.status === "LATE") late++;
+    else if (r.status === "ABSENT") absent++;
+    else if (r.status === "EXCUSED") excused++;
+
+    // Fetch session date info
+    let dateStr = r.markedAt ? r.markedAt.split("T")[0] : "";
+    if (r.sessionId) {
+      const sDoc = await sessionsCollection.doc(r.sessionId).get();
+      if (sDoc.exists) dateStr = sDoc.data().date;
+    }
+
+    history.push({
+      attendanceId: r.id,
+      sessionId: r.sessionId,
+      date: dateStr,
+      eligibilityType: r.eligibilityType,
+      status: r.status,
+      lateMinutes: r.lateMinutes,
+      absenceReason: r.absenceReason,
+      notes: r.notes,
+    });
+  }
+
+  // Sort history newest first
+  history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const totalExpected = present + late + absent + excused;
+  const attendanceRate = totalExpected > 0 ? ((present + late) / totalExpected) * 100 : 100.0;
+  const punctualityRate = present + late > 0 ? (present / (present + late)) * 100 : 100.0;
+
+  return {
+    studentId,
+    expectedSessions: totalExpected,
+    presentCount: present,
+    lateCount: late,
+    absentCount: absent,
+    excusedCount: excused,
+    extraCount: extra,
+    attendanceRate: Number(attendanceRate.toFixed(1)),
+    punctualityRate: Number(punctualityRate.toFixed(1)),
+    history,
+  };
+};
+
+// 🎯 Manager Analytics & At-Risk Students
+exports.getAcademyAttendanceAnalytics = async (dateRange = "this_month") => {
+  const snap = await attendanceCollection.get();
+  const records = snap.docs.map((doc) => AttendanceRecordModel.fromFirestore(doc));
+
+  let totalExpected = 0;
+  let present = 0;
+  let late = 0;
+  let absent = 0;
+  let excused = 0;
+
+  const studentStatsMap = new Map();
+
+  for (const r of records) {
+    if (r.eligibilityType === "EXPECTED") totalExpected++;
+    if (r.status === "PRESENT") present++;
+    else if (r.status === "LATE") late++;
+    else if (r.status === "ABSENT") absent++;
+    else if (r.status === "EXCUSED") excused++;
+
+    if (!studentStatsMap.has(r.studentId)) {
+      studentStatsMap.set(r.studentId, { present: 0, late: 0, absent: 0, excused: 0, expected: 0 });
+    }
+    const stat = studentStatsMap.get(r.studentId);
+    if (r.eligibilityType === "EXPECTED") stat.expected++;
+    if (r.status === "PRESENT") stat.present++;
+    if (r.status === "LATE") stat.late++;
+    if (r.status === "ABSENT") stat.absent++;
+    if (r.status === "EXCUSED") stat.excused++;
+  }
+
+  const overallRate = totalExpected > 0 ? ((present + late) / totalExpected) * 100 : 100.0;
+  const overallPunctuality = present + late > 0 ? (present / (present + late)) * 100 : 100.0;
+
+  // Identify At-Risk Students (< 75% attendance or 3+ absences)
+  const atRiskStudents = [];
+  for (const [studentId, stat] of studentStatsMap.entries()) {
+    const rate = stat.expected > 0 ? ((stat.present + stat.late) / stat.expected) * 100 : 100;
+    if (rate < 75 || stat.absent >= 3) {
+      const sDoc = await studentsCollection.doc(studentId).get();
+      const sData = sDoc.exists ? sDoc.data() : {};
+      atRiskStudents.push({
+        studentId,
+        studentName: sData.name || "Unknown",
+        group: sData.group || "N/A",
+        attendanceRate: Number(rate.toFixed(1)),
+        absentCount: stat.absent,
+        lateCount: stat.late,
+        riskLevel: rate < 60 || stat.absent >= 5 ? "HIGH" : "MEDIUM",
+      });
+    }
+  }
+
+  return {
+    totalExpectedSessions: totalExpected,
+    presentCount: present,
+    lateCount: late,
+    absentCount: absent,
+    excusedCount: excused,
+    overallAttendanceRate: Number(overallRate.toFixed(1)),
+    overallPunctualityRate: Number(overallPunctuality.toFixed(1)),
+    atRiskStudents,
+  };
+};
+
+// 🎯 Attendance Audit Logs
+exports.getAuditLogs = async (sessionId = null, studentId = null) => {
+  let query = auditCollection.orderBy("changedAt", "desc");
+  if (sessionId) query = query.where("sessionId", "==", sessionId);
+  if (studentId) query = query.where("studentId", "==", studentId);
+
+  const snap = await query.get();
+  return snap.docs.map((doc) => AttendanceAuditModel.fromFirestore(doc));
+};
