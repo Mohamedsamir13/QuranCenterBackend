@@ -5,8 +5,8 @@ const { getAllLimiter, writeLimiter } = require("../middleWares/rateLimiter");
 const { verifyToken } = require("../middleWares/authMiddleware");
 
 const restrictToStaff = (req, res, next) => {
-  if (!req.user || (req.user.type !== "Manager" && req.user.type !== "Teacher")) {
-    return res.status(403).json({ message: "Access denied: Managers and Teachers only" });
+  if (!req.user || (req.user.type !== "Manager" && req.user.type !== "Teacher" && req.user.type !== "Assistant")) {
+    return res.status(403).json({ message: "Access denied: Managers, Teachers and Assistants only" });
   }
   next();
 };

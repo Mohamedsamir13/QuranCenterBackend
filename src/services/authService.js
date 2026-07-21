@@ -14,7 +14,7 @@ const register = async ({ name, email, password, type, age, group, teacherId, ri
   //   throw new Error("Registering as Manager is not allowed");
   // }
 
-  if (!["Parent", "Teacher", "Student", "Manager"].includes(type)) {
+  if (!["Parent", "Teacher", "Student", "Manager", "Assistant"].includes(type)) {
     throw new Error("Invalid user type");
   }
 
@@ -66,6 +66,13 @@ const register = async ({ name, email, password, type, age, group, teacherId, ri
       students: [],
     });
     console.log(`👨‍🏫 Teacher profile created for: ${email}`);
+  } else if (type === "Assistant") {
+    await db.collection("assistants").doc(userRecord.uid).set({
+      id: userRecord.uid,
+      name: name,
+      students: [],
+    });
+    console.log(`🙋‍♂️ Assistant profile created for: ${email}`);
   } else if (type === "Manager") {
     await db.collection("managers").doc(userRecord.uid).set({
       id: userRecord.uid,
