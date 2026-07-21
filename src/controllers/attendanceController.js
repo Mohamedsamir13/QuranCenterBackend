@@ -87,8 +87,8 @@ exports.getStudentAttendanceSummary = async (req, res) => {
 
 exports.getAcademyAnalytics = async (req, res) => {
   try {
-    const { dateRange } = req.query;
-    const analytics = await attendanceRepo.getAcademyAttendanceAnalytics(dateRange);
+    const { date, dateRange } = req.query;
+    const analytics = await attendanceRepo.getAcademyAttendanceAnalytics(date || dateRange);
     res.json({ status: "success", data: analytics });
   } catch (e) {
     res.status(500).json({ status: "error", message: e.message });

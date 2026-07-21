@@ -372,9 +372,36 @@ exports.getStudentAttendanceSummary = async (studentId) => {
 };
 
 // 🎯 Manager Analytics & At-Risk Students
-exports.getAcademyAttendanceAnalytics = async (dateRange = "this_month") => {
-  const snap = await attendanceCollection.get();
-  const records = snap.docs.map((doc) => AttendanceRecordModel.fromFirestore(doc));
+exports.getAcademyAttendanceAnalytics = async (dateParam = "this_month") => {
+  let records = [];
+
+  if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+    const sessionsSnap = await sessionsCollection.where("date", "==", dateParam).get();
+    if (sessionsSnap.empty) {
+      return {
+        totalExpectedSessions: 0,
+        presentCount: 0,
+        lateCount: 0,
+        absentCount: 0,
+        excusedCount: 0,
+        overallAttendanceRate: 100.0,
+        overallPunctualityRate: 100.0,
+        atRiskStudents: [],
+      };
+    }
+    const sessionIds = sessionsSnap.docs.map((d) => d.id);
+    const chunks = [];
+    for (let i = 0; i < sessionIds.length; i += 30) {
+      chunks.push(sessionIds.slice(i, i + 30));
+    }
+    for (const chunk of chunks) {
+      const snap = await attendanceCollection.where("sessionId", "in", chunk).get();
+      records = records.concat(snap.docs.map((doc) => AttendanceRecordModel.fromFirestore(doc)));
+    }
+  } else {
+    const snap = await attendanceCollection.get();
+    records = snap.docs.map((doc) => AttendanceRecordModel.fromFirestore(doc));
+  }
 
   let totalExpected = 0;
   let present = 0;
@@ -402,7 +429,10 @@ exports.getAcademyAttendanceAnalytics = async (dateRange = "this_month") => {
     if (r.status === "EXCUSED") stat.excused++;
   }
 
-  const overallRate = totalExpected > 0 ? Math.min(100.0, ((present + late) / Math.max(totalExpected, present + late + absent + excused)) * 100) : 100.0;
+  const computedTotal = present + late + absent + excused;
+  totalExpected = Math.max(totalExpected, computedTotal);
+
+  const overallRate = totalExpected > 0 ? Math.min(100.0, ((present + late) / totalExpected) * 100) : 100.0;
   const overallPunctuality = present + late > 0 ? Math.min(100.0, (present / (present + late)) * 100) : 100.0;
 
   // Identify At-Risk Students (Strictly 3+ absences)
@@ -447,7 +477,7 @@ exports.getAuditLogs = async (sessionId = null, studentId = null) => {
   return snap.docs.map((doc) => AttendanceAuditModel.fromFirestore(doc));
 };
 
-// 🎯 Get Today's Absences (Manager Dashboard - Fast)
+// 🎯 Get Today's Absences (Manager Dashboard - Fast & Consistent)
 exports.getTodayAbsences = async (targetDate = null) => {
   const dateStr = targetDate || new Date().toISOString().split("T")[0];
 
@@ -458,31 +488,21 @@ exports.getTodayAbsences = async (targetDate = null) => {
   const absences = [];
 
   for (const sessionDoc of sessionsSnap.docs) {
-    const session = GroupSessionModel.fromFirestore(sessionDoc);
+    const sessionDetails = await exports.getSessionAttendanceDetails(sessionDoc.id);
+    if (!sessionDetails || !sessionDetails.attendance) continue;
 
-    // Get group info
-    const groupDoc = await groupsCollection.doc(session.groupId).get();
+    const groupDoc = await groupsCollection.doc(sessionDetails.session.groupId).get();
     const groupData = groupDoc.exists ? groupDoc.data() : {};
     const groupName = groupData.name || "Unknown Group";
 
-    // Get attendance records for this session
-    const attSnap = await attendanceCollection
-      .where("sessionId", "==", session.id)
-      .where("status", "==", "ABSENT")
-      .get();
+    const absentItems = sessionDetails.attendance.filter((item) => item.status === "ABSENT");
 
-    for (const attDoc of attSnap.docs) {
-      const att = AttendanceRecordModel.fromFirestore(attDoc);
-      if (att.eligibilityType !== "EXPECTED") continue;
-
-      // Fetch student info
+    for (const att of absentItems) {
       const sDoc = await studentsCollection.doc(att.studentId).get();
       const sData = sDoc.exists ? sDoc.data() : {};
 
-      // Get student's full history stats
       const historySnap = await attendanceCollection
         .where("studentId", "==", att.studentId)
-        .where("eligibilityType", "==", "EXPECTED")
         .get();
 
       let totalPresent = 0, totalLate = 0, totalAbsent = 0, totalExcused = 0;
@@ -493,15 +513,16 @@ exports.getTodayAbsences = async (targetDate = null) => {
         else if (r.status === "ABSENT") totalAbsent++;
         else if (r.status === "EXCUSED") totalExcused++;
       });
+
       const totalExpected = totalPresent + totalLate + totalAbsent + totalExcused;
       const attendanceRate = totalExpected > 0 ? Math.min(100.0, ((totalPresent + totalLate) / totalExpected) * 100) : 100;
 
       absences.push({
         studentId: att.studentId,
-        studentName: sData.name || att.studentId,
+        studentName: att.studentName || sData.name || att.studentId,
         riwaya: sData.reports?.[0]?.riwaya || sData.riwaya || "N/A",
         level: sData.level || "N/A",
-        groupId: session.groupId,
+        groupId: sessionDetails.session.groupId,
         groupName,
         sessionDate: dateStr,
         absenceReason: att.absenceReason || "",
