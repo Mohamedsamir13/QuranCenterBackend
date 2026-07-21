@@ -402,19 +402,20 @@ exports.getAcademyAttendanceAnalytics = async (dateRange = "this_month") => {
     if (r.status === "EXCUSED") stat.excused++;
   }
 
-  const overallRate = totalExpected > 0 ? ((present + late) / totalExpected) * 100 : 100.0;
-  const overallPunctuality = present + late > 0 ? (present / (present + late)) * 100 : 100.0;
+  const overallRate = totalExpected > 0 ? Math.min(100.0, ((present + late) / Math.max(totalExpected, present + late + absent + excused)) * 100) : 100.0;
+  const overallPunctuality = present + late > 0 ? Math.min(100.0, (present / (present + late)) * 100) : 100.0;
 
   // Identify At-Risk Students (< 75% attendance or 3+ absences)
   const atRiskStudents = [];
   for (const [studentId, stat] of studentStatsMap.entries()) {
-    const rate = stat.expected > 0 ? ((stat.present + stat.late) / stat.expected) * 100 : 100;
+    const totalSess = Math.max(stat.expected, stat.present + stat.late + stat.absent + stat.excused);
+    const rate = totalSess > 0 ? Math.min(100.0, ((stat.present + stat.late) / totalSess) * 100) : 100;
     if (rate < 75 || stat.absent >= 3) {
       const sDoc = await studentsCollection.doc(studentId).get();
       const sData = sDoc.exists ? sDoc.data() : {};
       atRiskStudents.push({
         studentId,
-        studentName: sData.name || "Unknown",
+        studentName: sData.name || studentId,
         group: sData.group || "N/A",
         attendanceRate: Number(rate.toFixed(1)),
         absentCount: stat.absent,
@@ -447,11 +448,11 @@ exports.getAuditLogs = async (sessionId = null, studentId = null) => {
 };
 
 // 🎯 Get Today's Absences (Manager Dashboard - Fast)
-exports.getTodayAbsences = async () => {
-  const today = new Date().toISOString().split("T")[0];
+exports.getTodayAbsences = async (targetDate = null) => {
+  const dateStr = targetDate || new Date().toISOString().split("T")[0];
 
-  // Get all sessions today
-  const sessionsSnap = await sessionsCollection.where("date", "==", today).get();
+  // Get all sessions for target date
+  const sessionsSnap = await sessionsCollection.where("date", "==", dateStr).get();
   if (sessionsSnap.empty) return [];
 
   const absences = [];
@@ -493,16 +494,16 @@ exports.getTodayAbsences = async () => {
         else if (r.status === "EXCUSED") totalExcused++;
       });
       const totalExpected = totalPresent + totalLate + totalAbsent + totalExcused;
-      const attendanceRate = totalExpected > 0 ? ((totalPresent + totalLate) / totalExpected) * 100 : 100;
+      const attendanceRate = totalExpected > 0 ? Math.min(100.0, ((totalPresent + totalLate) / totalExpected) * 100) : 100;
 
       absences.push({
         studentId: att.studentId,
-        studentName: sData.name || "Unknown",
+        studentName: sData.name || att.studentId,
         riwaya: sData.reports?.[0]?.riwaya || sData.riwaya || "N/A",
         level: sData.level || "N/A",
         groupId: session.groupId,
         groupName,
-        sessionDate: today,
+        sessionDate: dateStr,
         absenceReason: att.absenceReason || "",
         totalPresent,
         totalLate,
@@ -518,9 +519,9 @@ exports.getTodayAbsences = async () => {
 };
 
 // 🎯 Get Today's KPI Stats (fast summary)
-exports.getTodayStats = async () => {
-  const today = new Date().toISOString().split("T")[0];
-  const sessionsSnap = await sessionsCollection.where("date", "==", today).get();
+exports.getTodayStats = async (targetDate = null) => {
+  const dateStr = targetDate || new Date().toISOString().split("T")[0];
+  const sessionsSnap = await sessionsCollection.where("date", "==", dateStr).get();
 
   if (sessionsSnap.empty) {
     return { totalSessions: 0, totalExpected: 0, present: 0, late: 0, absent: 0, excused: 0, notRecorded: 0 };
@@ -593,10 +594,11 @@ exports.getGroupAttendanceStats = async (groupId) => {
   for (const [studentId, stat] of studentStatsMap.entries()) {
     const sDoc = await studentsCollection.doc(studentId).get();
     const sData = sDoc.exists ? sDoc.data() : {};
-    const rate = stat.expected > 0 ? ((stat.present + stat.late) / stat.expected) * 100 : 100;
+    const totalSess = Math.max(stat.expected, stat.present + stat.late + stat.absent + stat.excused);
+    const rate = totalSess > 0 ? Math.min(100.0, ((stat.present + stat.late) / totalSess) * 100) : 100;
     studentStats.push({
       studentId,
-      studentName: sData.name || "Unknown",
+      studentName: sData.name || studentId,
       riwaya: sData.reports?.[0]?.riwaya || sData.riwaya || "N/A",
       ...stat,
       attendanceRate: Number(rate.toFixed(1)),

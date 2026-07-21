@@ -107,7 +107,8 @@ exports.getAuditLogs = async (req, res) => {
 
 exports.getTodayAbsences = async (req, res) => {
   try {
-    const absences = await attendanceRepo.getTodayAbsences();
+    const { date } = req.query;
+    const absences = await attendanceRepo.getTodayAbsences(date);
     res.json({ status: "success", data: absences });
   } catch (e) {
     res.status(500).json({ status: "error", message: e.message });
@@ -116,7 +117,8 @@ exports.getTodayAbsences = async (req, res) => {
 
 exports.getTodayStats = async (req, res) => {
   try {
-    const stats = await attendanceRepo.getTodayStats();
+    const { date } = req.query;
+    const stats = await attendanceRepo.getTodayStats(date);
     res.json({ status: "success", data: stats });
   } catch (e) {
     res.status(500).json({ status: "error", message: e.message });
