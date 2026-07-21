@@ -125,10 +125,12 @@ exports.getSessionAttendanceDetails = async (sessionId) => {
   // ✅ STEP 4: Merge — for each group student, default status to "PRESENT" for open sessions
   const studentAttendanceList = [];
   const seenStudentIds = new Set();
+  const seenStudentNames = new Set();
 
   for (const s of groupStudents) {
-    if (seenStudentIds.has(s.id)) continue;
+    if (seenStudentIds.has(s.id) || (s.name && seenStudentNames.has(s.name))) continue;
     seenStudentIds.add(s.id);
+    if (s.name) seenStudentNames.add(s.name);
 
     const record = recordsMap.get(s.id);
     studentAttendanceList.push({
