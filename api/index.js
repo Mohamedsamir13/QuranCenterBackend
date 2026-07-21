@@ -12,6 +12,7 @@ const attendanceRoutes = require("../src/routes/attendanceRoutes");
 const scheduleRoutes = require("../src/routes/scheduleRoutes");
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cors());
 

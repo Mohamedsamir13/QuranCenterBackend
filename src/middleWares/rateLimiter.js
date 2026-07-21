@@ -30,7 +30,7 @@ const loginLimiterByEmail = rateLimit({
 // 🔹 GET requests limiter
 const getAllLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 20,
+  max: 300,
   message: { message: "Too many requests. Please slow down." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -39,7 +39,7 @@ const getAllLimiter = rateLimit({
 // 🔹 General write operations limiter (POST / PUT / DELETE)
 const writeLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: 100,
   message: { message: "Too many write operations. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
